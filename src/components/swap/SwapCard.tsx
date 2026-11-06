@@ -1,6 +1,8 @@
 "use client";
+import Brackets from "@/components/Brackets";
 import { useCallback, useState } from "react";
 import { friendly } from "@/lib/errors";
+import SlippageButton from "./SlippageButton";
 import { formatUnits, parseUnits, type Address } from "viem";
 import { useQueryClient } from "@tanstack/react-query";
 import { CHAIN } from "@/lib/ethereum/chains";
@@ -107,14 +109,11 @@ export default function SwapCard() {
   const flip = () => { clearTx(); setFrom(to); setTo(from); setAmount(""); };
 
   return (
-    <div className="w-full max-w-md rounded-none border border-line bg-card p-4 shadow-2xl shadow-black/50">
+    <div className="relative w-full max-w-md bg-card p-4">
+      <Brackets corners={["tl", "br"]} size={26} />
       <div className="flex items-center justify-between px-2 pb-2 pt-1">
         <h2 className="text-lg font-semibold">Swap</h2>
-        <label className="flex items-center gap-1 text-xs text-muted">Slippage
-          <select value={slip} onChange={(e) => setSettings({ slippageBps: Number(e.target.value) })} className="rounded-md border border-line bg-card2 px-1.5 py-1 text-fg">
-            {[...new Set([10, 50, 100, 300, 1000, 2500, slip])].sort((x, y) => x - y).map((b) => <option key={b} value={b}>{b / 100}%</option>)}
-          </select>
-        </label>
+        <SlippageButton />
       </div>
 
       <div className="rounded-none border border-line bg-card2 p-4">

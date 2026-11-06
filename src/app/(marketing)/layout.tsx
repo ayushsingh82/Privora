@@ -3,10 +3,10 @@ import Footer from "@/components/Footer";
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
+    <div className="bg-black text-white">
       <MarketingNav />
-      <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+      <main>{children}</main>
       <Footer />
-    </>
+    </div>
   );
 }

@@ -1,4 +1,5 @@
 "use client";
+import Brackets, { Label } from "@/components/Brackets";
 import { useState } from "react";
 import { useSettings, setSettings } from "@/lib/settings";
 import { useAnon } from "@/lib/hooks";
@@ -32,7 +33,8 @@ export default function Settings() {
     <div className="mx-auto max-w-2xl space-y-5">
       <div className="fade-up flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Settings</h1>
+          <Label>SETTINGS</Label>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Settings</h1>
           <p className="mt-1 text-sm text-muted">Stored only in this browser. Shared by Swap and Liquidity.</p>
         </div>
         <button onClick={() => { setSettings({ slippageBps: 50, deadlineMin: 20 }); setCustom(""); }} className="rounded-md border border-line px-4 py-2 text-sm text-muted hover:bg-card2 hover:text-fg">Reset to defaults</button>

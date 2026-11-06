@@ -1,42 +1,40 @@
 import Link from "next/link";
 import Logo from "./Logo";
 
-const COLS = [
-  { h: "Trade", l: [["Swap", "/swap"], ["Liquidity", "/liquidity"], ["Pools", "/pools"]] },
-  { h: "Privacy", l: [["Privacy", "/privacy"], ["Settings", "/settings"]] },
-  { h: "Docs", l: [
-    ["Anon-RPC integration", "https://github.com/ayushsingh82/ethglobalmumbai/blob/main/docs/ANON_RPC_INTEGRATION.md"],
-    ["Test report", "https://github.com/ayushsingh82/ethglobalmumbai/blob/main/docs/TEST_REPORT.md"],
-    ["GitHub", "https://github.com/ayushsingh82/ethglobalmumbai"],
-  ] },
-] as const;
+const GH = "https://github.com/ayushsingh82/Privora";
 
 export default function Footer() {
+  const col = "text-sm text-neutral-400 transition-colors hover:text-white";
   return (
-    <footer className="mt-20 bg-card/40">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 md:grid-cols-[1.6fr_repeat(3,1fr)]">
-        <div>
-          <div className="flex items-center gap-2 text-lg font-semibold"><Logo size={28} />Privora</div>
-          <p className="mt-3 max-w-xs text-sm text-muted">Swap privately. Read anonymously. The real Uniswap V2 contracts, with every chain read routed through Anon-RPC.</p>
-        </div>
-        {COLS.map((c) => (
-          <div key={c.h}>
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted">{c.h}</h4>
-            <ul className="mt-3 space-y-2 text-sm">
-              {c.l.map(([t, href]) => (
-                <li key={t}>
-                  {href.startsWith("http")
-                    ? <a href={href} target="_blank" rel="noreferrer" className="hover:text-accent">{t}</a>
-                    : <Link href={href} className="hover:text-accent">{t}</Link>}
-                </li>
-              ))}
+    <footer className="px-6 py-16">
+      <div className="mx-auto max-w-6xl">
+        <div className="grid gap-10 sm:grid-cols-4">
+          <div className="sm:col-span-2">
+            <p className="flex items-center gap-2.5 text-sm font-semibold tracking-[0.22em]"><Logo size={20} />PRIVORA</p>
+            <p className="mt-3 max-w-sm text-sm text-neutral-500">Trade on Uniswap without telling an RPC provider who you are. Every lookup goes through Anon-RPC.</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold tracking-[0.2em] text-neutral-500">PRODUCT</p>
+            <ul className="mt-4 space-y-2">
+              <li><a href="/#how" className={col}>How it works</a></li>
+              <li><a href="/#flow" className={col}>The flow</a></li>
+              <li><Link href="/swap" className={col}>Open app</Link></li>
+              <li><Link href="/privacy" className={col}>Privacy page</Link></li>
             </ul>
           </div>
-        ))}
-      </div>
-      <div aria-hidden className="select-none overflow-hidden">
-        <div className="mx-auto max-w-6xl px-4 text-center text-[22vw] font-bold leading-[0.85] tracking-tighter text-accent/20 md:text-[11rem]">
-          Privora
+          <div>
+            <p className="text-xs font-semibold tracking-[0.2em] text-neutral-500">RESOURCES</p>
+            <ul className="mt-4 space-y-2">
+              <li><a href={GH} target="_blank" rel="noreferrer" className={col}>GitHub</a></li>
+              <li><a href={`${GH}/blob/main/docs/ANON_RPC_INTEGRATION.md`} target="_blank" rel="noreferrer" className={col}>Anon-RPC integration</a></li>
+              <li><a href={`${GH}/blob/main/docs/TEST_REPORT.md`} target="_blank" rel="noreferrer" className={col}>Test report</a></li>
+              <li><a href="/#architecture" className={col}>Architecture</a></li>
+            </ul>
+          </div>
+        </div>
+        <div className="mt-14 flex flex-col gap-2 pt-6 text-xs text-neutral-600 sm:flex-row sm:items-center sm:justify-between">
+          <span>© 2026 Privora · built at ETHGlobal Mumbai</span>
+          <span>Built on Uniswap V2 and Anon-RPC</span>
         </div>
       </div>
     </footer>

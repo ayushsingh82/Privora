@@ -1,4 +1,5 @@
 "use client";
+import Brackets, { Label } from "@/components/Brackets";
 import { useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { CHAIN } from "@/lib/ethereum/chains";
@@ -12,7 +13,8 @@ import type { Pool } from "@/lib/uniswap/pools";
 
 function PoolTable({ pools }: { pools: Pool[] }) {
   return (
-    <div className="overflow-hidden rounded-none border border-line bg-card">
+    <div className="relative overflow-hidden bg-card">
+      <Brackets corners={["tl", "br"]} />
       <div className={`hidden gap-x-6 border-b border-line px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted md:grid ${POOL_COLS}`}>
         <span>Pool</span><span>Price</span><span>Reserves</span><span>LP supply</span><span className="w-[10.5rem]" />
       </div>
@@ -120,7 +122,8 @@ export default function Pools() {
     <div className="space-y-8">
       <div className="fade-up flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Pools</h1>
+          <Label>POOLS</Label>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Pools</h1>
           <p className="mt-1 text-sm text-muted">Live Uniswap V2 pairs on {CHAIN.name}. Every number is read from chain via the active transport.</p>
         </div>
         <div className="flex gap-2 text-xs">

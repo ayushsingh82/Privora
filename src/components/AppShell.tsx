@@ -78,14 +78,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className="min-w-0">
+      <div className="relative min-w-0">
+        <div aria-hidden className="app-grid pointer-events-none absolute inset-x-0 top-0 h-[520px]" />
         <header className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-bg/90 px-4 py-4 backdrop-blur lg:px-8">
           <Link href="/" className="flex items-center gap-2 font-semibold lg:hidden"><Logo size={30} />Privora</Link>
           <div className="hidden items-center gap-2 text-sm lg:flex"><span className="text-muted">Privora</span><span className="text-muted/50">/</span><span className="font-semibold">{NAV.find((n) => active(n.href))?.label ?? ""}</span></div>
           <WalletButton />
         </header>
-        <div className="px-4 lg:px-8"><PrivacyBanner /></div>
-        <main className="mx-auto max-w-5xl px-4 pb-28 pt-4 lg:px-8 lg:pb-12">{children}</main>
+        <div className="relative px-4 lg:px-8"><PrivacyBanner /></div>
+        <main className="relative mx-auto max-w-5xl px-4 pb-28 pt-4 lg:px-8 lg:pb-12">{children}</main>
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 bg-card/95 px-2 pb-2 pt-1 shadow-[0_-8px_24px_rgba(0,0,0,.4)] backdrop-blur lg:hidden">

@@ -1,4 +1,5 @@
 "use client";
+import Brackets, { Label } from "@/components/Brackets";
 import { useState } from "react";
 import { useAnon } from "@/lib/hooks";
 import { CHAIN } from "@/lib/ethereum/chains";
@@ -17,7 +18,8 @@ function PathLive({ status, mode, attempt }: { status: string; mode: string; att
     : [{ t: "Your browser" }, { t: "Ethereum RPC" }];
   const ring = (w?: boolean) => (!w ? "border-line bg-card2" : status === "ready" ? "border-ok/50 bg-ok/10" : status === "failed" ? "border-bad/50 bg-bad/10" : "border-accent/50 bg-accent/10");
   return (
-    <section className="fade-up border border-line bg-card p-5">
+    <section className="fade-up relative bg-card p-5">
+      <Brackets corners={["tl", "br"]} />
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="font-semibold">Live read path</h2>
         <span className="text-xs text-muted">{mode !== "anon" ? "Standard: reads are direct" : on ? "Reads flow through Anon-RPC" : status === "failed" ? "Privacy layer unavailable" : attempt > 1 ? `Starting the worker (try ${attempt})` : "Starting the worker"}</span>
@@ -72,7 +74,8 @@ export default function PrivacyCenter() {
     <div className="space-y-6">
       <div className="fade-up flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Privacy Center</h1>
+          <Label>PRIVACY</Label>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Privacy Center</h1>
           <p className="mt-1 text-sm text-muted">Live numbers from this session. Nothing here is estimated.</p>
         </div>
         <span className="flex items-center gap-2 border border-line bg-card px-3 py-1.5 text-xs text-muted"><span className="h-2 w-2 animate-pulse rounded-full bg-ok" />Live</span>

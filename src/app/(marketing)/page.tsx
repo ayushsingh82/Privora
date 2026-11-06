@@ -1,218 +1,267 @@
-import Reveal from "@/components/Reveal";
 import Link from "next/link";
-import { ExposedArt, FeatureArt, HeroArt, StepReadArt, StepVerifyArt, StepWalletArt, VeiledArt } from "@/components/art";
+import Reveal from "@/components/Reveal";
+import CursorWave from "@/components/CursorWave";
+import Brackets, { Label } from "@/components/Brackets";
+import ProfileBuild from "@/components/ProfileBuild";
+import { HeroAnimation, StepReadArt, StepVerifyArt, StepWalletArt } from "@/components/art";
+import { CHAIN } from "@/lib/ethereum/chains";
 
-const STEPS = [
-  { n: "01", t: "Lookups go through Anon-RPC", d: "Your balances, token allowances, pool reserves and price quotes are fetched through an anonymising network, not straight from your browser to an RPC company." },
-  { n: "02", t: "Your wallet signs, as always", d: "Approving and swapping happen inside your own wallet (MetaMask, Rabby and others). Privora never holds your keys or your funds." },
-  { n: "03", t: "Check it yourself", d: "The Privacy Center lists every request, the route it took and how long it took. If the privacy layer goes down, Privora stops instead of quietly falling back." },
-];
-
-function Head({ eyebrow, title, sub }: { eyebrow: string; title: string; sub?: string }) {
-  return (
-    <div className="mx-auto max-w-2xl text-center">
-      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">{eyebrow}</div>
-      <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-4xl">{title}</h2>
-      {sub && <p className="mt-3 text-sm leading-relaxed text-muted md:text-base">{sub}</p>}
-    </div>
-  );
-}
-
-function Node({ t, d, hot }: { t: string; d: string; hot?: boolean }) {
-  return (
-    <div className={`min-w-[8.5rem] flex-1 rounded-none border p-4 text-center ${hot ? "border-accent/50 bg-accent/10" : "border-line bg-card"}`}>
-      <div className={`text-sm font-semibold ${hot ? "text-accent" : ""}`}>{t}</div>
-      <div className="mt-1 text-xs text-muted">{d}</div>
-    </div>
-  );
-}
-const Wire = ({ hot, d = 0 }: { hot?: boolean; d?: number }) => (
-  <div className="relative mx-1 hidden h-0.5 w-8 shrink-0 overflow-hidden rounded bg-line md:block">
-    {hot && <span style={{ ["--d" as string]: `${d}ms` }} className="wire-pulse absolute inset-y-0 w-3.5 rounded bg-accent" />}
-  </div>
-);
-
-const EXPOSURE = [
-  { t: "Your network identity", p: "IP address, rough location and browser, attached to every request.", d: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c2.5 3 2.5 15 0 18M12 3c-2.5 3-2.5 15 0 18" },
-  { t: "Your wallets", p: "Every address you check is revealed, and linked to the identity above.", d: "M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7zM3 7l2-3h12M16 14h3" },
-  { t: "Your interests", p: "Which tokens and pools you look at, even if you never trade them.", d: "M12 3 3 8l9 5 9-5-9-5zM3 13l9 5 9-5" },
-  { t: "Your habits", p: "When and how often you check in, building a pattern over time.", d: "M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 8v4l3 2" },
-];
-
-const SIDES = [
-  { name: "A typical dapp", hot: false, path: ["You", "RPC provider"], items: ["Who is asking: your IP address and location, on every request", "Which wallets and pools you look up, tied to you", "Your habits over time, easy to profile"] },
-  { name: "Privora", hot: true, path: ["You", "Anon-RPC", "RPC provider"], items: ["Requests arrive from a mixnet exit, so they can't be tied to you", "Lookups stay unlinked, with a fresh key for every session", "No direct fallback: if privacy fails, reads stop"] },
-];
+const GH = "https://github.com/ayushsingh82/Privora";
+const A = "text-accent";
 
 const FEATURES = [
-  { i: "lock", t: "Fails closed, never quietly", d: "In Anon-RPC mode a read is never sent directly. If the privacy layer is down you see an error with Retry, or you can choose Standard RPC yourself." },
-  { i: "layers", t: "The real Uniswap V2", d: "Prices and swaps come from the unmodified Uniswap V2 router and pair contracts onchain. No price API, no aggregator, no custom AMM." },
-  { i: "key", t: "A fresh identity per session", d: "Each wallet session gets its own random isolation key, so reads from different sessions are not tied together by the transport." },
-  { i: "list", t: "Nothing hidden, nothing stored", d: "Every request is logged by method, route, result and time, and never by parameters, addresses or keys. Export the log any time." },
+  {
+    n: "01", corner: ["tl"], art: <StepReadArt />, title: "Reads go through Anon-RPC",
+    body: <>Balances, allowances, reserves, quotes and receipts are fetched by a sandboxed worker that sends them through a <span className={A}>mixnet</span>. The RPC provider gets the question from an <span className={A}>anonymous exit</span>, not from you.</>,
+  },
+  {
+    n: "02", corner: ["tr"], art: <StepWalletArt />, title: "Your wallet signs, as always",
+    body: <>Approvals and swaps are signed and sent by your own wallet. Privora <span className={A}>never holds keys or funds</span>, and approvals are always for the <span className={A}>exact amount</span>.</>,
+  },
+  {
+    n: "03", corner: ["bl"], art: null, title: "It fails closed",
+    body: <>In Anon-RPC mode a read is <span className={A}>never sent directly</span>. If the privacy layer goes down, reads stop and you see why. A watchdog retries and switches between anonymising networks, <span className={A}>never to a normal RPC</span>.</>,
+  },
+  {
+    n: "04", corner: ["br"], art: <StepVerifyArt />, title: "You can verify it",
+    body: <>The Privacy page lists every request, the <span className={A}>route it took</span> and how long it took, and counts direct reads. In Anon-RPC mode that number <span className={A}>stays at zero</span>.</>,
+  },
 ];
 
+const EXPOSED = [
+  ["Network identity", "Your IP address, rough location and browser accompany every request."],
+  ["Wallet addresses", "Each balance and allowance check names a wallet you control."],
+  ["Interests", "Token and pool lookups show what you are researching before you trade."],
+  ["Habits", "Timing and frequency make your activity easy to profile over months."],
+];
+
+const FLOW = [
+  { tag: "open", big: "Anon-RPC\nstarting", small: "A sandboxed worker boots and is verified. Reads begin only once it is ready." },
+  { tag: "read", big: "getAmountsOut", small: "Quotes and pools come from the Uniswap V2 router onchain, through the mixnet. No price API." },
+  { tag: "sign", big: "Your\nwallet", small: "Approve the exact amount and swap. The transaction is signed and sent by your wallet." },
+  { tag: "verify", big: "Direct reads\n0", small: "The Privacy page counts every request. In Anon-RPC mode direct reads stay at zero." },
+];
+
+const LAYERS = [
+  ["Interface", "A Next.js dashboard: swap, liquidity, pools, privacy and settings. No wallet library, the wallet is plain EIP-1193."],
+  ["Read layer", "viem on a custom transport over one function, rpcRead(), the only path to the network. Reads are batched with Multicall3."],
+  ["Anon-RPC worker", "A hash-pinned, sandboxed worker on a mixnet, with a fresh isolation key per wallet session, a boot watchdog and failover."],
+  ["Wallet", "Signs approvals and swaps on a separate write path that is never mixed with reads."],
+];
+
+const COVERED = ["Balances and allowances", "Pool reserves, prices and quotes", "Token names, symbols and decimals", "Transaction receipt polling"];
+const NOT_COVERED = ["Signing and sending your transaction", "Your address and trades onchain", "The one-time worker setup read", "Your wallet extension's own traffic"];
+
 const FAQ = [
-  ["Does Privora hide my transactions?", "No. Transactions are signed and broadcast by your wallet and are public onchain, like on any dapp. Privora anonymises the lookups your browser makes before you trade: balances, allowances, pools and quotes."],
-  ["Where do prices and quotes come from?", "From the Uniswap V2 router contract itself. Privora calls getAmountsOut onchain for the pool of your pair (or via WETH), through Anon-RPC. There is no price API or aggregator in between."],
-  ["Which pools does it use?", "Uniswap V2 pools from the official factory on the connected network, Sepolia by default. Pools are discovered from the factory and shown on the Pools page with live reserves."],
+  ["Does Privora hide my transactions?", "No. Transactions are signed and broadcast by your wallet and are public onchain, like on any dapp. Privora protects the lookups your browser makes before you trade: balances, allowances, pools and quotes."],
+  ["Where do prices and quotes come from?", "From the Uniswap V2 router contract itself. Privora calls getAmountsOut onchain for the pool of your pair, or via WETH, through Anon-RPC. There is no price API or aggregator in between."],
+  ["Which pools does it use?", "Uniswap V2 pools from the official factory on the connected network, Sepolia by default. The Pools page shows featured pools for popular tokens and the newest pairs, with live reserves."],
   ["Why is it slower than a normal dapp?", "Anon-RPC sends each lookup through a mixnet, which adds a few seconds per request. Privora batches many reads into one call with Multicall3 to keep this reasonable."],
-  ["What if the privacy network is unavailable?", "Privora stops reading and shows an error. You can retry, or deliberately switch to Standard RPC, which is clearly labelled as direct."],
+  ["What if the privacy network is unavailable?", "Privora retries and can switch to another anonymising network. If none works, reads stop and you see why. You can then retry, or deliberately choose Standard RPC, which is labelled as direct."],
   ["Which networks are supported?", "Sepolia by default, and Ethereum mainnet through configuration."],
 ];
 
+function Card({ children, corners = ["tl"], className = "" }: { children: React.ReactNode; corners?: string[]; className?: string }) {
+  return <div className={`relative bg-[#151515] ${className}`}><Brackets corners={corners} />{children}</div>;
+}
+
 export default function Home() {
+  const contracts: [string, string][] = [["Uniswap V2 Factory", CHAIN.factory], ["Uniswap V2 Router02", CHAIN.router], ["WETH", CHAIN.weth]];
   return (
-    <div id="top" className="flex flex-col items-center gap-10">
-      <section className="relative flex min-h-[88vh] w-full flex-col justify-center gap-14 py-10">
-        <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_1fr]">
-          <div>
-            <span className="fade-up inline-flex items-center gap-2 border border-line bg-card px-3.5 py-1.5 text-xs text-muted"><span className="h-1.5 w-1.5 rounded-full bg-accent" />Built on Uniswap V2 · Powered by Anon-RPC</span>
-            <h1 style={{ ["--d" as string]: "100ms" }} className="fade-up mt-6 text-5xl font-semibold leading-[1.05] tracking-tight md:text-7xl">Swap privately.<br /><span className="text-accent">Read anonymously.</span></h1>
-            <p style={{ ["--d" as string]: "200ms" }} className="fade-up mt-6 max-w-xl text-base leading-relaxed text-muted md:text-lg">
-              The Uniswap you already know, with a private way to look things up. Your balances, prices and pool data travel through Anon-RPC, so no RPC provider can tell who is asking or build a profile of your wallet.
-            </p>
-            <div style={{ ["--d" as string]: "300ms" }} className="fade-up mt-9 flex flex-wrap gap-3">
-              <Link href="/swap" className="rounded-md bg-accent px-8 py-3.5 text-base font-semibold text-accent-fg shadow-lg shadow-accent/30 transition hover:brightness-110 active:scale-[.98]">Launch App</Link>
-              <a href="#how" className="rounded-md bg-card px-8 py-3.5 text-base font-semibold transition hover:bg-card2">See how it works</a>
-            </div>
-            <p style={{ ["--d" as string]: "380ms" }} className="fade-up mt-5 text-sm text-muted">Real Uniswap V2 contracts · Non-custodial · Reads never fall back to a normal RPC</p>
+    <div className="w-full">
+      {/* Hero */}
+      <header className="relative isolate flex min-h-[88vh] flex-col overflow-hidden">
+        <CursorWave className="absolute inset-0 -z-10 h-full w-full" />
+        <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col items-center justify-center px-6 py-24 text-center">
+          <span className="fade-up mb-9 inline-flex items-center gap-2.5 bg-[#151515] px-5 py-2.5 text-sm font-medium text-neutral-100">
+            <span className="h-2 w-2 bg-accent" />
+            Built on Uniswap V2 · Powered by <span className={A}>Anon-RPC</span>
+          </span>
+          <h1 style={{ ["--d" as string]: "80ms" }} className="fade-up text-4xl font-semibold leading-[1.08] tracking-tight sm:text-6xl">
+            Trade on Uniswap without telling an RPC provider <span className={A}>who you are.</span>
+          </h1>
+          <p style={{ ["--d" as string]: "160ms" }} className="fade-up mt-6 max-w-xl text-base leading-7 text-neutral-400 sm:text-lg">
+            Privora sends every balance, price and pool lookup through Anon-RPC. The provider serving your data can no longer tie it to you or build a profile of your wallet.
+          </p>
+          <div style={{ ["--d" as string]: "240ms" }} className="fade-up mt-9 flex flex-wrap justify-center gap-3">
+            <Link href="/swap" className="bg-white px-6 py-3 text-sm font-medium text-black transition-colors hover:bg-neutral-200">Open app</Link>
+            <a href={`${GH}/blob/main/docs/ANON_RPC_INTEGRATION.md`} target="_blank" rel="noreferrer" className="border border-white/25 px-6 py-3 text-sm font-medium transition-colors hover:border-white/50">Docs</a>
           </div>
-          <div style={{ ["--d" as string]: "250ms" }} className="fade-up"><HeroArt className="h-auto w-full" /></div>
+          <p style={{ ["--d" as string]: "320ms" }} className="fade-up mt-6 text-sm text-neutral-500">Non-custodial · Open source · Reads never fall back to a normal RPC</p>
         </div>
-        <dl style={{ ["--d" as string]: "450ms" }} className="fade-up grid w-full grid-cols-2 gap-px border border-line bg-line text-left md:grid-cols-4">
-          {[
-            ["Swap engine", "Uniswap V2", "M12 3 3 8l9 5 9-5-9-5zM3 13l9 5 9-5"],
-            ["Read privacy", "Anon-RPC", "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"],
-            ["Signing", "Your wallet", "M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7zM3 7l2-3h12M16 14h3"],
-            ["Custody", "Non-custodial", "M7 11V8a5 5 0 0 1 10 0v3M6 11h12v9H6z"],
-          ].map(([k, v, d]) => (
-            <div key={k} className="flex items-center gap-4 bg-card px-6 py-5">
-              <span className="grid h-10 w-10 shrink-0 place-items-center bg-accent/15 text-accent">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={d} /></svg>
-              </span>
-              <div>
-                <dt className="text-[11px] font-medium uppercase tracking-wider text-muted">{k}</dt>
-                <dd className="mt-0.5 text-base font-semibold">{v}</dd>
-              </div>
-            </div>
-          ))}
-        </dl>
-      </section>
+      </header>
 
-      <Reveal className="w-full flex justify-center">
-      <section className="w-full min-h-[70vh] flex flex-col justify-center">
-        <Head eyebrow="The problem" title="Every lookup tells an RPC provider who is asking" sub="Before you trade, your wallet app reads the chain: balances, prices, pools. Those reads go to a company that sees much more than the number it returns." />
-        <div className="mt-10 grid gap-px border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
-          {EXPOSURE.map((x) => (
-            <div key={x.t} className="bg-card p-7">
-              <span className="grid h-11 w-11 place-items-center bg-accent/15 text-accent">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={x.d} /></svg>
-              </span>
-              <h3 className="mt-5 text-lg font-semibold">{x.t}</h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-muted">{x.p}</p>
-            </div>
-          ))}
-        </div>
-        <p className="mt-8 max-w-3xl text-base leading-relaxed text-muted md:text-lg">Put together, that is a profile: <span className="text-fg">this person, from this place, owns this wallet, watches these tokens, and checks in at these times.</span> Privora is built to break that link.</p>
-      </section>
-      </Reveal>
-
-      <Reveal className="w-full flex justify-center">
-      <section id="how" className="w-full scroll-mt-24 min-h-[85vh] flex flex-col justify-center">
-        <Head eyebrow="How it works" title="Private lookups, normal signing" sub="Privora changes how your browser reads the chain. It does not change how you trade." />
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {STEPS.map((s, i) => (
-            <div key={s.n} className="lift border border-line bg-card p-8">
-              <div className="mb-6">{[<StepReadArt key="a" />, <StepWalletArt key="b" />, <StepVerifyArt key="c" />][i]}</div>
-              <div className="mono text-sm font-semibold tracking-widest text-accent">{s.n}</div>
-              <h3 className="mt-2 text-xl font-semibold">{s.t}</h3>
-              <p className="mt-1 text-sm leading-relaxed text-muted">{s.d}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-      </Reveal>
-
-      <Reveal className="w-full flex justify-center">
-      <section className="w-full min-h-[85vh] flex flex-col justify-center">
-        <Head eyebrow="The path" title="Where each request goes" sub="Reads take the private route. Writes use your wallet, exactly as before." />
-        <div className="mt-8 space-y-4 rounded-none border border-line bg-card p-5 md:p-6">
-          <div>
-            <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-accent"><span className="h-2 w-2 rounded-md bg-accent" />Reads (anonymised)</div>
-            <div className="flex flex-col items-stretch gap-3 md:flex-row md:items-center md:gap-0">
-              <Node t="Your browser" d="Balances, quotes, reserves" />
-              <Wire hot d={0} />
-              <Node t="Anon-RPC worker" d="Hash-pinned, sandboxed" hot />
-              <Wire hot d={400} />
-              <Node t="Mixnet exit" d="The RPC sees this, not your IP" hot />
-              <Wire />
-              <Node t="Ethereum RPC" d="Uniswap V2 data" />
-            </div>
+      {/* How it works */}
+      <section id="how" className="px-6 py-24">
+        <Reveal className="mx-auto max-w-5xl">
+          <span className="mb-5 inline-block bg-black text-xs font-semibold tracking-[0.2em] text-accent">HOW IT WORKS</span>
+          <h2 className="mb-14 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">Private lookups. Normal signing.</h2>
+          <div className="grid gap-6 sm:grid-cols-2">
+            {FEATURES.map((f) => (
+              <Card key={f.n} corners={f.corner} className="overflow-hidden p-8">
+                <span aria-hidden className="pointer-events-none absolute -right-2 -top-6 select-none font-mono text-8xl font-bold text-accent opacity-[0.08]">{f.n}</span>
+                {f.art && <div className="relative mb-6 max-w-[280px]">{f.art}</div>}
+                {!f.art && (
+                  <div className="relative mb-6 flex h-10 w-10 items-center justify-center border border-white/10 bg-black text-accent">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M7 11V8a5 5 0 0 1 10 0v3M6 11h12v9H6z" /></svg>
+                  </div>
+                )}
+                <h3 className="relative text-lg font-medium">{f.title}</h3>
+                <p className="relative mt-3 text-sm leading-6 text-neutral-400">{f.body}</p>
+              </Card>
+            ))}
           </div>
-          <div className="border-t border-line pt-4">
-            <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted"><span className="h-2 w-2 rounded-md bg-muted" />Writes (signed by your wallet)</div>
-            <div className="flex flex-col items-stretch gap-3 md:flex-row md:items-center md:gap-0">
-              <Node t="Your wallet" d="Approve, swap, add, remove" />
-              <Wire />
-              <Node t="Ethereum" d="Signed and sent by your wallet" />
-            </div>
-          </div>
-        </div>
+        </Reveal>
       </section>
-      </Reveal>
 
-      <Reveal className="w-full flex justify-center">
-      <section id="compare" className="w-full scroll-mt-24 min-h-[85vh] flex flex-col justify-center">
-        <Head eyebrow="Compare" title="What the RPC provider can link to you" />
-        <div className="mt-10 grid gap-5 md:grid-cols-2">
-          {SIDES.map((side) => (
-            <div key={side.name} className={`border p-8 ${side.hot ? "border-accent/40 bg-accent/5" : "border-line bg-card"}`}>
-              <div className={`text-xs font-semibold uppercase tracking-wider ${side.hot ? "text-accent" : "text-muted"}`}>{side.name}</div>
-              <div className="mt-5">{side.hot ? <VeiledArt /> : <ExposedArt />}</div>
-              <div className="mt-6 text-sm font-medium">The RPC provider sees</div>
-              <ul className="mt-3 space-y-3 text-sm">
-                {side.items.map((t) => (
-                  <li key={t} className="flex items-start gap-3"><span className={`mt-2 h-1.5 w-1.5 shrink-0 ${side.hot ? "bg-accent" : "bg-bad"}`} /><span className={side.hot ? "" : "text-muted"}>{t}</span></li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
+      {/* The request */}
+      <section id="request" className="px-6 py-24">
+        <Reveal className="mx-auto max-w-5xl">
+          <Label>THE REQUEST</Label>
+          <h2 className="mb-4 mt-3 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">The same request, with and without Privora.</h2>
+          <p className="mb-10 max-w-2xl text-sm leading-6 text-neutral-400">A normal dapp sends who you are along with every question. Privora strips that at the shield, re-wraps the request and mixes it, so the provider only sees an anonymous exit.</p>
+          <Card corners={["tl", "br"]} className="p-4 sm:p-8"><HeroAnimation className="h-auto w-full" /></Card>
+        </Reveal>
       </section>
-      </Reveal>
 
-      <Reveal className="w-full flex justify-center">
-      <section className="w-full min-h-[85vh] flex flex-col justify-center">
-        <Head eyebrow="Built in" title="Built to fail safe" />
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
-        {FEATURES.map((f) => (
-          <div key={f.t} className="flex items-center gap-6 lift border border-line bg-card p-8">
-            <FeatureArt kind={f.i as "lock" | "layers" | "key" | "list"} />
+      {/* The problem */}
+      <section id="problem" className="px-6 py-24">
+        <Reveal className="mx-auto max-w-5xl">
+          <Label>THE PROBLEM</Label>
+          <h2 className="mb-12 mt-3 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">Every lookup tells an RPC provider who is asking.</h2>
+          <div className="grid items-start gap-10 lg:grid-cols-2">
             <div>
-              <h3 className="text-lg font-semibold">{f.t}</h3>
-              <p className="mt-1 text-sm leading-relaxed text-muted">{f.d}</p>
+              <p className="text-base leading-7 text-neutral-400">Before every trade your wallet app reads the chain: balances, prices, pools. Those reads go to an RPC provider that sees far more than the number it returns.</p>
+              <dl className="mt-8 divide-y divide-white/10 border-y border-white/10">
+                {EXPOSED.map(([t, d]) => (
+                  <div key={t} className="grid gap-1 py-4 sm:grid-cols-[9.5rem_1fr] sm:gap-6">
+                    <dt className="font-medium">{t}</dt>
+                    <dd className="text-sm leading-6 text-neutral-400">{d}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+            <ProfileBuild />
+          </div>
+        </Reveal>
+      </section>
+
+      {/* The flow */}
+      <section id="flow" className="px-6 py-24">
+        <Reveal className="mx-auto max-w-5xl">
+          <Label>THE FLOW</Label>
+          <h2 className="mb-8 mt-3 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">From a cold start to a verified swap.</h2>
+          <div className="mb-14 flex flex-wrap items-center gap-x-3 gap-y-2 text-xl text-neutral-600">
+            {["Your browser", "Anon-RPC", "Mixnet exit", "RPC provider"].map((t, i) => (
+              <span key={t} className="flex items-center gap-3">
+                {i > 0 && <span aria-hidden>→</span>}
+                <span className={`inline-flex items-center gap-2.5 bg-[#151515] px-4 py-2.5 text-sm ${t === "Anon-RPC" ? "text-accent" : "text-neutral-100"}`}>{t === "Anon-RPC" && <span className="h-2 w-2 bg-accent" />}{t}</span>
+              </span>
+            ))}
+          </div>
+          <ol className="grid gap-5 lg:grid-cols-4">
+            {FLOW.map((s, i) => (
+              <li key={i}>
+                <Card corners={["tl", "br"]} className="flex h-full flex-col p-6">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-sm font-medium text-accent">0{i + 1}</span>
+                    <span className="text-[10px] uppercase tracking-[0.15em] text-neutral-500">{s.tag}</span>
+                  </div>
+                  <p className="mt-6 whitespace-pre-line font-mono text-lg font-medium leading-tight">{s.big}</p>
+                  <p className="mt-3 text-xs leading-5 text-neutral-400">{s.small}</p>
+                </Card>
+              </li>
+            ))}
+          </ol>
+        </Reveal>
+      </section>
+
+      {/* Architecture */}
+      <section id="architecture" className="px-6 py-24">
+        <Reveal className="mx-auto max-w-5xl">
+          <Label>ARCHITECTURE</Label>
+          <h2 className="mb-16 mt-3 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">Four layers, one path to the network.</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {LAYERS.map(([n, d], i) => (
+              <Card key={n} corners={["tl"]} className="flex min-h-[190px] flex-col p-7">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-sm text-accent">0{i + 1}</span>
+                </div>
+                <h3 className="mt-4 text-base font-medium">{n}</h3>
+                <p className="mt-3 text-sm leading-6 text-neutral-400">{d}</p>
+              </Card>
+            ))}
+          </div>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-4 bg-[#151515] p-6">
+            <div>
+              <p className="text-base font-medium">{CHAIN.name}</p>
+              <p className="mt-1 text-xs text-neutral-500">Uniswap V2 factory, router and pairs, used unmodified. Anon-RPC reads, wallet writes.</p>
             </div>
           </div>
-        ))}
-        </div>
+          <div className="mt-10">
+            <p className="mb-3 text-xs tracking-[0.15em] text-neutral-500">{CHAIN.name.toUpperCase()} · CHAIN {CHAIN.id}</p>
+            <div className="divide-y divide-white/10 border-y border-white/10 font-mono text-xs">
+              {contracts.map(([label, addr]) => (
+                <div key={label} className="flex flex-col gap-1 py-2.5 sm:flex-row sm:items-center sm:gap-4">
+                  <span className="min-w-[10rem] text-neutral-500">{label}</span>
+                  <a href={`${CHAIN.explorer}/address/${addr}`} target="_blank" rel="noreferrer" className="break-all text-neutral-300 underline decoration-white/20 underline-offset-4 transition-colors hover:text-white hover:decoration-white/50">{addr}</a>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Reveal>
       </section>
-      </Reveal>
 
-      <Reveal className="w-full flex justify-center">
-      <section id="faq" className="w-full max-w-3xl scroll-mt-24 min-h-[85vh] flex flex-col justify-center">
-        <Head eyebrow="FAQ" title="Questions" />
-        <div className="mt-8 space-y-3">
-          {FAQ.map(([q, a]) => (
-            <details key={q} open={q === FAQ[0][0]} className="group rounded-none border border-line bg-card px-5 py-4 open:bg-card2/40">
-              <summary className="flex cursor-pointer list-none items-center justify-between font-medium">
-                {q}<span className="text-accent transition group-open:rotate-45">+</span>
-              </summary>
-              <p className="mt-3 text-sm leading-relaxed text-muted">{a}</p>
-            </details>
-          ))}
+      {/* Security */}
+      <section id="security" className="px-6 py-24">
+        <Reveal className="mx-auto max-w-5xl">
+          <Label>SECURITY</Label>
+          <h2 className="mb-12 mt-3 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">Clear about what it protects, and what it does not.</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {[["Routed through Anon-RPC", COVERED, "bg-accent", ["tl"]], ["Not hidden by Privora", NOT_COVERED, "bg-neutral-500", ["br"]]].map(([h, items, dot, cs]) => (
+              <Card key={h as string} corners={cs as string[]} className="p-7">
+                <p className="font-medium">{h as string}</p>
+                <ul className="mt-5 space-y-3 text-sm text-neutral-400">
+                  {(items as string[]).map((t) => <li key={t} className="flex gap-3"><span className={`mt-2 h-1.5 w-1.5 shrink-0 ${dot}`} />{t}</li>)}
+                </ul>
+              </Card>
+            ))}
+          </div>
+          <ul className="mt-10 grid gap-x-10 gap-y-4 text-sm leading-6 text-neutral-400 sm:grid-cols-2">
+            {[["Fails closed.", " Reads are never sent directly in Anon-RPC mode."], ["Exact approvals.", " Never unlimited."], ["Simulated first.", " Reverts do not reach your wallet, so they cost no gas."], ["Checked by tests.", " Unit, fork and real-browser tests that count requests to the RPC host, plus real transactions on Sepolia."]].map(([b, t]) => <li key={b}><span className="font-medium text-white">{b}</span>{t}</li>)}
+          </ul>
+        </Reveal>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="px-6 py-24">
+        <Reveal className="mx-auto max-w-3xl">
+          <Label>FAQ</Label>
+          <h2 className="mb-10 mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Questions</h2>
+          <div className="divide-y divide-white/10 border-y border-white/10">
+            {FAQ.map(([q, a], i) => (
+              <details key={q} open={i === 0} className="group py-5">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-6 font-medium">{q}<span className="text-accent transition group-open:rotate-45">+</span></summary>
+                <p className="mt-3 text-sm leading-6 text-neutral-400">{a}</p>
+              </details>
+            ))}
+          </div>
+        </Reveal>
+      </section>
+
+      {/* Closing */}
+      <section className="relative isolate flex min-h-[60vh] items-center overflow-hidden">
+        <CursorWave className="absolute inset-0 -z-10 h-full w-full" spacing={34} />
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-black/40" />
+        <div className="mx-auto max-w-3xl px-6 text-center">
+          <h2 className="text-3xl font-semibold leading-tight tracking-tight sm:text-5xl">Try it on Sepolia. <span className={A}>Nothing to install</span> but a wallet.</h2>
+          <p className="mx-auto mt-5 max-w-lg text-sm leading-6 text-neutral-300 sm:text-base">Swap, add liquidity and watch the Privacy page keep direct reads at zero.</p>
+          <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
+            <Link href="/swap" className="bg-white px-6 py-3 text-sm font-medium text-black transition-colors hover:bg-neutral-200">Open app</Link>
+            <a href={GH} target="_blank" rel="noreferrer" className="border border-white/25 px-6 py-3 text-sm font-medium transition-colors hover:border-white/50">GitHub</a>
+          </div>
         </div>
       </section>
-      </Reveal>
     </div>
   );
 }

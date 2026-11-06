@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #131313;
-  --card: #1b1b1b;
-  --card2: #222222;
-  --line: #2c2f36;
+  --bg: #000000;
+  --card: #151515;
+  --card2: #1d1d1d;
+  --line: #2a2a2a;
   --fg: #ffffff;
-  --muted: #98a1c0;
+  --muted: #9a9aa5;
   --accent: #ff007a;
   --accent-fg: #ffffff;
   --ok: #27ae60;
@@ -24,8 +24,8 @@
   --color-bad: var(--bad);
 }
 html { color-scheme: dark; }
-body { background: var(--bg); color: var(--fg); font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+.mono { font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace; }
 input::placeholder { color: #5d6785; }
 input[type="number"]::-webkit-inner-spin-button { display: none; }
 
@@ -57,3 +57,6 @@ button:disabled { cursor: not-allowed; }
 .net-node { animation: nodepulse 3.2s ease-in-out infinite; }
 .line-flow { animation: lineflow 1.8s linear infinite; }
 @media (prefers-reduced-motion: reduce) { .net-node, .line-flow { animation: none; } }
+
+/* dashboard: faint dot grid behind the page, fading out downwards */
+.app-grid { background-image: radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px); background-size: 28px 28px; -webkit-mask-image: linear-gradient(to bottom, #000, transparent 85%); mask-image: linear-gradient(to bottom, #000, transparent 85%); }
