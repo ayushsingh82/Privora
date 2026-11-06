@@ -9,6 +9,7 @@
     "build": "next build",
     "start": "next start -p 3200",
     "typecheck": "tsc --noEmit",
+    "e2e": "node --no-warnings scripts/e2e-anon.mts",
     "test": "node --test --no-warnings \"src/lib/**/*.test.ts\""
   },
   "dependencies": {

@@ -156,6 +156,25 @@ export function killWorker() {
   set({ status: "failed", error: "Worker stopped manually (fail-closed demo)" });
 }
 
+// Mixnet exits are fragile when hit with a burst of cold tunnel opens (one timeout can make the rest report
+// "no exit"). So anonymised reads are queued with small concurrency and retried — always through Anon-RPC again.
+const ANON_CONCURRENCY = 2;
+const ANON_ATTEMPTS = 3;
+let active = 0;
+const waiting: Array<() => void> = [];
+async function slot<T>(fn: () => Promise<T>): Promise<T> {
+  if (active >= ANON_CONCURRENCY) await new Promise<void>((r) => waiting.push(r));
+  active++;
+  try {
+    return await fn();
+  } finally {
+    active--;
+    waiting.shift()?.();
+  }
+}
+const TRANSIENT = /NoTunnelExit|TunnelOpenTimeout|timed out|timeout|Tunnel|Circuit/i;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 /**
  * The single choke point for chain reads. Returns the JSON-RPC `result`.
  * - anon mode: needs a ready worker on a real anonymizing network; otherwise throws. NEVER falls back to direct.
@@ -181,12 +200,26 @@ export async function rpcRead(url: string, method: string, params: unknown[], is
         keys.add(isolationKey);
         set({ isolationKeys: keys.size });
       }
-      res = await worker.fetch(url, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body,
-        ...(isolationKey ? { anonOptions: { isolationKey } } : {}),
-      } as RequestInit);
+      const w = worker;
+      res = await slot(async () => {
+        let lastErr: unknown;
+        for (let attempt = 1; attempt <= ANON_ATTEMPTS; attempt++) {
+          if (worker !== w || state.status !== "ready") throw new PrivacyError("Anon-RPC worker stopped — refusing to fall back to direct RPC.");
+          try {
+            return await w.fetch(url, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body,
+              ...(isolationKey ? { anonOptions: { isolationKey } } : {}),
+            } as RequestInit);
+          } catch (e) {
+            lastErr = e;
+            if (attempt === ANON_ATTEMPTS || !TRANSIENT.test(msg(e))) break;
+            await sleep(1500 * attempt);
+          }
+        }
+        throw lastErr;
+      });
     }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const j = await res.json();

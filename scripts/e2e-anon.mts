@@ -1,0 +1,82 @@
+// Real-browser end-to-end proof that reads go through the Anon-RPC worker (headless Chrome, throwaway profile).
+// Needs a production server:  npm run build && npm start     (default http://127.0.0.1:3200)
+//   npm run e2e
+import { launch } from "./lib/cdp.mts";
+
+const BASE = process.env.BASE ?? "http://127.0.0.1:3200";
+const p = await launch({ width: 1280, height: 1000 });
+let failed = 0;
+const step = async (name: string, fn: () => Promise<void>) => {
+  const t0 = Date.now();
+  try { await fn(); console.log(`  ✔ ${name} (${((Date.now() - t0) / 1000).toFixed(1)}s)`); }
+  catch (e) { failed++; console.log(`  ✖ ${name}\n      ${e instanceof Error ? e.message : e}`); }
+};
+const text = () => p.eval<string>("document.body.innerText");
+const stat = async (label: string) => {
+  const t = await text();
+  const m = t.match(new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\n([^\\n]+)"));
+  return m?.[1] ?? "";
+};
+const hydrated = () => p.waitFor("Object.keys(document.querySelector('a,button')).some(k=>k.startsWith('__react'))", 30000, "hydration");
+const nav = async (label: string) => { await p.click(label); };   // client-side navigation keeps the worker alive
+
+console.log(`PrivateSwap e2e → ${BASE}`);
+await p.goto(BASE + "/privacy");
+await hydrated();
+
+await step("Anon-RPC worker boots and passes hash-pinned load (status: ready)", async () => {
+  await p.waitFor("document.body.innerText.includes('Worker\\nready')", 150000, "worker ready");
+});
+
+await step("Pools page loads real Uniswap V2 pairs through Anon-RPC", async () => {
+  await nav("Pools");
+  await p.waitFor("document.body.innerText.includes('Reserve ')", 150000, "pool cards");
+});
+
+await step("Privacy Center: anonymised reads > 0, direct reads = 0, rows labelled Anon-RPC", async () => {
+  await nav("Privacy Center");
+  await p.waitFor("document.body.innerText.includes('Anonymised reads ✓')", 10000);
+  const ok = Number(await stat("Anonymised reads ✓"));
+  const direct = Number(await stat("Direct reads"));
+  if (!(ok > 0)) throw new Error(`expected anonymised reads > 0, got ${ok}`);
+  if (direct !== 0) throw new Error(`expected 0 direct reads, got ${direct}`);
+  const rows = await p.eval<number>("[...document.querySelectorAll('tbody tr')].filter(r=>r.innerText.includes('eth_call') && r.innerText.includes('Anon-RPC') && r.innerText.includes('Success')).length");
+  if (rows < 1) throw new Error("no eth_call / Anon-RPC / Success row in activity log");
+  console.log(`      anonymised reads: ${ok}, direct reads: ${direct}, eth_call rows: ${rows}`);
+});
+
+await step("Standard mode generates DIRECT reads and the log says so", async () => {
+  await p.click("Standard");
+  await nav("Pools");
+  await p.waitFor("document.body.innerText.includes('Reserve ')", 60000);
+  await nav("Privacy Center");
+  await p.waitFor("document.body.innerText.includes('Anonymised reads ✓')", 10000);
+  await p.waitFor("Number((document.body.innerText.match(/Direct reads\\n(\\d+)/)||[])[1]) > 0", 30000, "direct reads counted");
+  const rows = await p.eval<number>("[...document.querySelectorAll('tbody tr')].filter(r=>r.innerText.includes('Direct RPC') && r.innerText.includes('Success')).length");
+  if (rows < 1) throw new Error("no Direct RPC row");
+});
+
+await step("Fail-closed: killed worker => reads fail visibly, NO direct fallback", async () => {
+  await p.click("Anon-RPC");            // header toggle back to Anon-RPC mode
+  const before = Number(await stat("Direct reads"));
+  await p.click("Kill worker");
+  await p.waitFor("document.body.innerText.includes('Worker\\nfailed')", 5000);
+  await nav("Pools");
+  await p.waitFor("document.body.innerText.includes('Anon-RPC unavailable')", 10000, "unavailable banner");
+  await nav("Privacy Center");
+  await p.waitFor("document.body.innerText.includes('Anonymised reads ✓')", 10000);
+  const after = Number(await stat("Direct reads"));
+  if (after !== before) throw new Error(`direct reads changed ${before} -> ${after}: SILENT FALLBACK`);
+});
+
+await step("Restart worker recovers Anon-RPC", async () => {
+  await p.click("Restart worker");
+  await p.waitFor("document.body.innerText.includes('Worker\\nready')", 150000, "worker ready again");
+});
+
+await p.screenshot(process.env.SHOT ?? "/tmp/privateswap-privacy.png").catch(() => {});
+const errs = p.errors.filter((e) => !/favicon|ERR_BLOCKED|Failed to load resource/.test(e));
+if (errs.length) console.log("  console errors:", errs.slice(0, 5));
+await p.close();
+console.log(failed ? `\n${failed} step(s) FAILED` : "\nAll steps passed");
+process.exit(failed ? 1 : 0);
