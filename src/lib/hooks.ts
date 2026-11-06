@@ -1,5 +1,5 @@
 "use client";
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { zeroAddress, type Address } from "viem";
 import { anonStore, type AnonState } from "./anon-rpc/manager";
@@ -7,7 +7,7 @@ import { walletStore, type WalletState } from "./ethereum/wallet";
 import { readClient } from "./ethereum/read-client";
 import { CHAIN } from "./ethereum/chains";
 import { erc20Abi, factoryAbi, pairAbi, routerAbi } from "./uniswap/abis";
-import { wrapped, type Token } from "./tokens";
+import { DEFAULT_TOKENS, lookupToken, wrapped, type Token } from "./tokens";
 
 export const useAnon = (): AnonState => useSyncExternalStore(anonStore.subscribe, anonStore.getSnapshot, anonStore.getSnapshot);
 export const useWallet = (): WalletState => useSyncExternalStore(walletStore.subscribe, walletStore.getSnapshot, walletStore.getSnapshot);
@@ -92,4 +92,21 @@ export function useQuote(from: Token | null, to: Token | null, amountIn: bigint)
       return best;
     },
   });
+}
+
+/** Pre-select tokens from ?a=&b= (or ?from=&to=) links. Metadata is validated onchain via lookupToken. */
+export function useUrlTokens(set: (slot: 0 | 1, t: Token) => void) {
+  const { ready } = useReadsReady();
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    if (!ready || done || typeof window === "undefined") return;
+    setDone(true);
+    const p = new URLSearchParams(window.location.search);
+    ([[0, p.get("a") ?? p.get("from")], [1, p.get("b") ?? p.get("to")]] as const).forEach(([slot, addr]) => {
+      if (!addr) return;
+      const known = DEFAULT_TOKENS.find((t) => t.address.toLowerCase() === addr.toLowerCase());
+      if (known) set(slot, known);
+      else lookupToken(addr).then((t) => set(slot, t)).catch(() => {});
+    });
+  }, [ready, done, set]);
 }

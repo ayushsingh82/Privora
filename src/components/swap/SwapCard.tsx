@@ -1,12 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { formatUnits, parseUnits, type Address } from "viem";
 import { useQueryClient } from "@tanstack/react-query";
 import { CHAIN } from "@/lib/ethereum/chains";
 import { ETH, WETH, wrapped, type Token } from "@/lib/tokens";
 import { erc20Abi, routerAbi } from "@/lib/uniswap/abis";
 import { getAmountOut, minReceived, priceImpactBps } from "@/lib/uniswap/pricing";
-import { useAllowance, usePair, useQuote, useReadsReady, useTokenBalance, useWallet, useAnon } from "@/lib/hooks";
+import { useAllowance, usePair, useQuote, useReadsReady, useTokenBalance, useUrlTokens, useWallet, useAnon } from "@/lib/hooks";
 import { connect, getWalletClient, switchToAppChain } from "@/lib/ethereum/wallet";
 import { runTx, type TxState } from "@/lib/ethereum/tx";
 import TokenSelect from "../TokenSelect";
@@ -27,6 +27,8 @@ export default function SwapCard() {
   const [amount, setAmount] = useState("");
   const [slip, setSlip] = useState(50); // bps
   const [tx, setTx] = useState<TxState>({ phase: "idle" });
+
+  useUrlTokens(useCallback((slot, t) => (slot === 0 ? setFrom(t) : setTo(t)), []));
 
   const amountIn = from ? parse(amount, from.decimals) : 0n;
   const balIn = useTokenBalance(from, w.address);
