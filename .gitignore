@@ -11,3 +11,9 @@ npm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 .next-fork/
+.next-preview/
+
+# pitch video and its build output (large, never committed)
+/video/
+*.mp4
+*.mov

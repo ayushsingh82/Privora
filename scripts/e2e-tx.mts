@@ -75,7 +75,9 @@ await step("Approve (exact amount) + swap token → ETH (swapExactTokensForETH)"
   const allowance = BigInt(await rpc("eth_call", [{ to: TOKEN, data: "0xdd62ed3e" + ME.slice(2).toLowerCase().padStart(64, "0") + router.slice(2).toLowerCase().padStart(64, "0") }, "latest"]));
   if (allowance !== 50n * 10n ** 18n) throw new Error(`allowance ${allowance} != exact 50e18 (unlimited approval?)`);
   // DDOGE charges a 20% transfer tax: the app must simulate, pick the fee-on-transfer router variant, and need slippage > tax.
-  await p.eval(`(()=>{const s=document.querySelector('select');Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(s,'2500');s.dispatchEvent(new Event('change',{bubbles:true}))})()`);
+  await p.click("button[aria-label='Slippage settings']");
+  await p.type("input[aria-label='Custom slippage']", "25");
+  await p.click("Apply");
   await actWait("Swap");
   await confirmed("Swap ");
   const left = await balanceOf(TOKEN, ME);

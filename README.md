@@ -16,7 +16,7 @@ Uniswap V2 with every Ethereum read routed through [Anon-RPC](https://github.com
 ![Tests](https://img.shields.io/badge/tests-unit%20%2B%20real--browser%20e2e-34d399)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-<img src="docs/images/home.png" alt="Privora swap interface" width="880" />
+<img src="docs/images/home.png" alt="Privora landing page" width="880" />
 
 </div>
 
@@ -146,9 +146,11 @@ sequenceDiagram
 | Network list | `src/lib/anon-rpc/networks.ts` | `nox` (default), `tor-js`, `nym`; blocks the non-anonymising `passthrough` worker |
 | Read client | `src/lib/ethereum/read-client.ts` | viem client whose transport is `rpcRead()`; per-session isolation keys |
 | Write path | `src/lib/ethereum/wallet.ts` | Wallet signing, a separate transport that is never routed through `rpcRead()` |
-| Privacy Center | `src/app/privacy/page.tsx` | Live worker status, counters and request log |
+| Privacy page | `src/app/(app)/privacy/page.tsx` | Live read path, worker status, counters and request log |
 
 Design rules we held to: no silent direct fallback, separate read and write transports, a fresh random isolation key per wallet session, and a log that cannot contain parameters, addresses or keys.
+
+When the worker will not start, `startWorker()` abandons a stuck boot after 30 seconds, retries it three times, then tries each other anonymising network once. After a full failure it schedules another attempt in the background (up to 12 times). `bootOrder()` is unit-tested to guarantee that only anonymising networks are ever failover targets.
 
 
 
@@ -156,31 +158,37 @@ Design rules we held to: no silent direct fallback, separate read and write tran
 
 | Area | What you get |
 | --- | --- |
-| **Landing page** | Hero with an animated request-path illustration · how it works · "where each request goes" diagram · what changes for your IP · fail-safe design · FAQ. Square, minimal, custom SVG art |
-| **Dashboard** | Sidebar app shell (bottom tab bar on phones): Swap · Liquidity · Pools · Privacy · Settings, with a live read-privacy status card |
-| **Swap** | Token picker with real logos, popular-token chips and onchain address lookup · router quote (direct or via WETH) · price impact · minimum received · 0.3% fee · exact-amount approvals (never unlimited) · ETH↔token and token↔token swaps · Half / Max |
+| **Landing page** | Black, square, minimal: a cursor-reactive dot-grid hero, four feature cards with corner brackets, an animated "same request, with and without Privora" diagram, a profile that builds itself to show what an RPC provider can assemble, a four-step flow, the four architecture layers with the real Uniswap V2 contract addresses, a "protects / does not protect" section and an FAQ |
+| **Dashboard** | Sidebar app shell (bottom tab bar on phones) in the same style: Swap · Liquidity · Pools · Privacy · Settings, a dot-grid backdrop, pink corner brackets on the main cards and a live read-privacy status card |
+| **Swap** | Token picker with real logos, popular-token chips and onchain address lookup · router quote (direct or via WETH) · price impact · minimum received · 0.3% fee · exact-amount approvals (never unlimited) · ETH↔token and token↔token swaps · Half / Max · slippage popover with presets and a custom value |
 | **Fee-on-transfer tokens** | Transactions are simulated first; taxed tokens automatically use the router's `SupportingFeeOnTransferTokens` variants. Doomed transactions never reach your wallet |
 | **Liquidity** | Add (new or existing pool, auto-paired amounts) · remove 25/50/75/100% · LP position and pool share · LP approval |
 | **Pools** | **Featured pools** for real tokens (USDC, LINK, DAI, USDT, UNI) · newest factory pairs · smart search (symbol, name, token or pool address, optional second token) · live reserves, price, LP supply · token icons · deep links into Swap / Add liquidity |
-| **Privacy Center** | Live read-path diagram · worker status · per-transport counters · average latency · requests by method · filterable request log with Export JSON · "Kill worker" fail-closed demo · what is / isn't anonymised |
+| **Privacy page** | Live read-path diagram · worker status · per-transport counters · average latency · requests by method · filterable request log with Export JSON · "Kill worker" fail-closed demo · what is / isn't anonymised |
 | **Settings** | Slippage presets and custom value, deadline, a worked example, and the built-in safety defaults |
-| **Resilience** | Bounded concurrency, retries and worker self-heal for flaky mixnet exits — always back through Anon-RPC, never direct |
+| **Resilience** | Bounded concurrency, retries and worker self-heal for flaky mixnet exits. A 30-second start-up watchdog abandons a stuck worker, retries it, then fails over between anonymising networks (nox, tor-js, Nym). After a full failure the app keeps retrying in the background, so it recovers without a click. Receipts are polled with one small request every few seconds instead of viem's heavy default polling. Always back through Anon-RPC, never direct |
 
 ## Screenshots
 
-| Landing page | Swap with a live quote |
+| Landing page | How it works |
 | --- | --- |
-| <img src="docs/images/home.png" alt="Privora landing page" /> | <img src="docs/images/swap-quote.png" alt="Dashboard with sidebar and a live Uniswap V2 quote" /> |
+| <img src="docs/images/home.png" alt="Landing page hero" /> | <img src="docs/images/how.png" alt="Four feature cards with animated illustrations" /> |
 
-| Privacy Center (live data) | Pools |
+| The same request, with and without Privora | The problem: a profile builds itself |
 | --- | --- |
-| <img src="docs/images/privacy-center.png" alt="Privacy Center with live read path, counters, latency and request log" /> | <img src="docs/images/pools.png" alt="Pool explorer with token icons, prices and reserves" /> |
+| <img src="docs/images/request.png" alt="Animated diagram of a normal request and a Privora request through the mixnet" /> | <img src="docs/images/problem.png" alt="What an RPC provider can assemble from lookups alone" /> |
 
-| How a request travels | Liquidity | Settings |
+| Swap with a live quote | Privacy page (live data) |
+| --- | --- |
+| <img src="docs/images/swap-quote.png" alt="Dashboard with sidebar and a live Uniswap V2 quote" /> | <img src="docs/images/privacy-center.png" alt="Privacy page with the live read path, counters and request log" /> |
+
+| Pools | Liquidity | Settings |
 | --- | --- | --- |
-| <img src="docs/images/flow.png" alt="Read path through Anon-RPC and write path through the wallet" /> | <img src="docs/images/liquidity.png" alt="Add and remove liquidity" /> | <img src="docs/images/settings.png" alt="Slippage and deadline settings" /> |
+| <img src="docs/images/pools.png" alt="Pool explorer with featured pools" /> | <img src="docs/images/liquidity.png" alt="Add and remove liquidity" /> | <img src="docs/images/settings.png" alt="Slippage and deadline settings" /> |
 
-<details><summary>Mobile</summary>
+<details><summary>Architecture section and mobile</summary>
+
+<img src="docs/images/architecture.png" alt="Architecture layers and Uniswap V2 contract addresses" width="640" />
 
 <img src="docs/images/mobile.png" alt="Landing page on mobile" width="260" /> <img src="docs/images/mobile-app.png" alt="Dashboard on mobile with a bottom tab bar" width="260" />
 
@@ -188,14 +196,19 @@ Design rules we held to: no silent direct fallback, separate read and write tran
 
 ## Demo
 
-A 2 to 3 minute walkthrough (full script: [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)):
+A 3 to 3.5 minute walkthrough (the older, shorter script is in [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)):
 
-1. **The problem (20s).** On the landing page: a normal dapp sends every balance and quote read from your IP to an RPC company. Point at the "what changes for your IP" panels.
-2. **Launch App (20s).** Click *Launch App*. The sidebar card shows the worker starting, then "Anon-RPC active". Reads only begin once it is ready.
-3. **Swap (40s).** Connect a wallet on Sepolia, pick a real token such as USDC, enter an amount, and show the live quote, price impact and minimum received (the quote source is the Uniswap V2 router, onchain). Approve for the exact amount, then swap.
-4. **Privacy (30s).** Show the private-read counter going up while **Direct reads stay at 0**, the live read path and the request log (method, route, time, no parameters).
-5. **Fail-closed (30s).** Click **Kill worker**. Reads fail with a visible message, and the direct counter does not move. Restart the worker to recover.
-6. **Honest close (10s).** Transactions are still public onchain. Privora anonymises the reads that come before them.
+1. **The hook (15s).** On the landing page: a normal dapp tells an RPC provider who you are with every balance and quote read. The hero dots follow your cursor.
+2. **The problem (15s).** Scroll to *The problem*: a profile of you builds itself from lookups alone.
+3. **The idea (20s).** Scroll to *The request*: the same request twice. A normal dapp carries your identity to the provider; Privora strips it at the shield and mixes it through a mixnet.
+4. **Open the app (15s).** Click *Open app*. The sidebar card shows the worker starting, then "Anon-RPC active". Connect a wallet on Sepolia.
+5. **Quote and swap (45s).** Pick a real token such as USDC, enter an amount and show the live quote, price impact and minimum received (source: the Uniswap V2 router, onchain). Swap; your wallet signs and the receipt is polled through Anon-RPC.
+6. **Privacy page (20s).** Private reads climb while **Direct reads stay at 0**; the log shows method, route and time, never parameters.
+7. **Fail closed (20s).** Click **Kill worker**: reads stop with a visible message and the direct counter does not move. Restart the worker to recover.
+8. **Pools and architecture (25s).** Featured pools for USDC, LINK, DAI, USDT and UNI, then the architecture section: one function, `rpcRead()`, is the only path to the network.
+9. **Honest close (10s).** Transactions are still public onchain. Privora anonymises the reads that come before them.
+
+The pitch video itself is built with scripts under `video/`, which is git-ignored (large files, never committed).
 
 ## Quick start
 
@@ -240,9 +253,9 @@ Contract addresses are centralised in [`src/lib/ethereum/chains.ts`](src/lib/eth
 | `npm run typecheck` | Strict TypeScript |
 | `npm run build` | Production build |
 | `npm run e2e` | **Real headless Chrome, real Anon-RPC network:** worker boots and verifies · pools and a router quote are read through Anon-RPC · direct reads stay at 0 and the page makes no request to the RPC host after worker setup · Standard mode is labelled direct · killed worker fails closed with no fallback |
-| `npm run e2e:ui` | **Real headless Chrome:** the landing page and every dashboard page render with no console errors and no horizontal overflow at 1280px and 390px; Launch App, sidebar, mode toggle, settings persistence and the token selector work |
+| `npm run e2e:ui` | **Real headless Chrome:** the landing page and every dashboard page render with no console errors and no horizontal overflow at 1280px and 390px; Open app, sidebar, mode toggle, settings persistence and the token selector work |
 | `npm run e2e:tx` | **Real UI on a local Sepolia fork (anvil):** swap, exact-amount approve, taxed-token sell, add and remove liquidity — balances/allowances/LP verified onchain |
-| `npm run e2e:sepolia` | **Real Sepolia, real transactions:** the app in Anon-RPC mode while a throwaway test wallet swaps, approves and sells; the Privacy Center must show direct reads = 0 (needs `PRIVORA_TEST_WALLET`, see the script header) |
+| `npm run e2e:sepolia` | **Real Sepolia, real transactions:** the app in Anon-RPC mode while a throwaway test wallet swaps, approves and sells; the Privacy page must show direct reads = 0. It navigates inside the app so the worker is not restarted (needs `PRIVORA_TEST_WALLET`, see the script header) |
 | `npm run shots` | Regenerates the README screenshots from the running build |
 
 `npm run e2e` needs a running production server (`npm run build && npm start`) and Google Chrome (override with `CHROME=/path`).
@@ -254,7 +267,7 @@ Contract addresses are centralised in [`src/lib/ethereum/chains.ts`](src/lib/eth
 src/
   app/(marketing)/        Landing page at /
   app/(app)/              Dashboard (sidebar): /swap · /liquidity · /pools · /privacy · /settings
-  components/             AppShell (sidebar), MarketingNav, WalletButton, ModeToggle, TokenIcon, TokenSelect, PoolCard, art (SVG), swap/, liquidity/ …
+  components/             AppShell (sidebar), MarketingNav, CursorWave (landing background), Brackets, ProfileBuild, art (animated SVG), WalletButton, ModeToggle, TokenIcon, TokenSelect, PoolCard, swap/, liquidity/ …
   lib/
     anon-rpc/             manager.ts (worker lifecycle · rpcRead choke point · request log) · networks.ts
     ethereum/             chains.ts · read-client.ts (viem on rpcRead) · wallet.ts (write path) · tx.ts
@@ -277,15 +290,15 @@ docs/                     audit · Anon-RPC integration · demo script · test r
 
 ## Limitations
 
-- Public Anon-RPC networks are experimental: seconds of latency per request, and exits can be unavailable (Nox has few TLS-capable exits). Privora retries and self-heals but can still fail — visibly, with Retry.
-- Writes and the wallet's own RPC are **not** anonymised; the one-time worker bootstrap read and the page load are direct. Both are shown in the Privacy Center.
-- Wallet-signed flows are tested with a stub wallet, not a real wallet extension: on a local Sepolia fork (swap, approve, taxed-token sell, add and remove liquidity) and on real Sepolia (swap and exact-amount approve + sell of USDC through Anon-RPC). ERC-20↔ERC-20 swaps are implemented but not covered by a transaction test.
+- Public Anon-RPC networks are experimental: seconds of latency per request, and exits can be unavailable for minutes at a time (Nox has few TLS-capable exits). Privora retries, fails over between anonymising networks and keeps retrying in the background, but it can still be down: visibly, with Retry, and never silently falling back to a direct connection.
+- Writes and the wallet's own RPC are **not** anonymised; the one-time worker bootstrap read and the page load are direct. Both are shown on the Privacy page.
+- Wallet-signed flows are tested with a stub wallet, not a real wallet extension: on a local Sepolia fork (swap, approve, taxed-token sell, add and remove liquidity) and on real Sepolia (a swap, and an exact-amount approve plus sell, of USDC through Anon-RPC). Add and remove liquidity were verified on the fork; the real-chain liquidity run has not completed end to end. ERC-20↔ERC-20 swaps are implemented but not covered by a transaction test.
 - Multi-hop routing is limited to direct and via-WETH.
 - Sepolia Uniswap V2 pools are test pools with arbitrary liquidity.
 
 ## Documentation
 
-[Project audit](docs/PROJECT_AUDIT.md) · [Anon-RPC integration](docs/ANON_RPC_INTEGRATION.md) · [Demo script (2–3 min)](docs/DEMO_SCRIPT.md) · [Test report](docs/TEST_REPORT.md)
+[Hackathon submission text](docs/SUBMISSION.md) · [Project audit](docs/PROJECT_AUDIT.md) · [Anon-RPC integration](docs/ANON_RPC_INTEGRATION.md) · [Earlier demo script](docs/DEMO_SCRIPT.md) · [Test report](docs/TEST_REPORT.md)
 
 ## Licence
 

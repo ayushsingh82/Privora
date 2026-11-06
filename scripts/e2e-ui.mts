@@ -34,11 +34,11 @@ const p = await launch({ width: 1280, height: 900 });
 await p.goto(BASE + "/swap");
 await hydrated(p);
 
-await step("landing page has a Launch App button that opens the dashboard", async () => {
+await step("landing page has an Open app button that opens the dashboard", async () => {
   const q = await launch({ width: 1280, height: 900 });
   await q.goto(BASE + "/");
   await hydrated(q);
-  await q.click("Launch App");
+  await q.click("Open app");
   await q.waitFor("document.body.innerText.includes('You pay')", 15000, "swap page");
   await q.close();
 });
@@ -73,7 +73,7 @@ await step("Settings persist (localStorage) and flow into the swap card", async 
   await p.eval("[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='1%').click()");   // exact match ("0.1%" and "10%" also contain "1%")
   await p.goto(BASE + "/swap");             // full reload: must be restored from storage
   await hydrated(p);
-  await p.waitFor("document.querySelector('select') && document.querySelector('select').value === '100'", 10000, "slippage select = 1% after reload");
+  await p.waitFor("document.querySelector('[data-slippage]')?.getAttribute('data-slippage') === '100'", 10000, "slippage select = 1% after reload");
 });
 
 await step("swap button states: Connect wallet when disconnected", async () => {

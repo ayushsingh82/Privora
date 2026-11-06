@@ -14,13 +14,16 @@ export interface Page {
   waitFor(expr: string, timeoutMs?: number, label?: string): Promise<void>;
   click(selectorOrText: string): Promise<void>;
   type(selector: string, text: string): Promise<void>;
-  screenshot(path: string): Promise<void>;
+  /** Raw CDP access, used by the pitch-video recorder (screencast frames). */
+  send(method: string, params?: object): Promise<Record<string, any>>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  on(method: string, handler: (params: Record<string, any>) => void): void; // eslint-disable-line @typescript-eslint/no-explicit-any
+  screenshot(path: string, clip?: { x: number; y: number; width: number; height: number }): Promise<void>;
   logs: string[];
   errors: string[];
   close(): Promise<void>;
 }
 
-export async function launch(opts: { width?: number; height?: number } = {}): Promise<Page> {
+export async function launch(opts: { width?: number; height?: number; scale?: number } = {}): Promise<Page> {
   const port = 9300 + Math.floor(Math.random() * 500);
   const profile = mkdtempSync(join(tmpdir(), "sr-chrome-"));
   const proc: ChildProcess = spawn(
@@ -31,6 +34,7 @@ export async function launch(opts: { width?: number; height?: number } = {}): Pr
       `--remote-debugging-port=${port}`,
       `--user-data-dir=${profile}`,
       `--window-size=${opts.width ?? 1280},${opts.height ?? 1000}`,
+      ...(opts.scale ? [`--force-device-scale-factor=${opts.scale}`] : []),
       "--no-first-run",
       "--no-default-browser-check",
       "about:blank",
@@ -64,8 +68,10 @@ export async function launch(opts: { width?: number; height?: number } = {}): Pr
   const pending = new Map<number, { res: (v: Json) => void; rej: (e: Error) => void }>();
   const logs: string[] = [];
   const errors: string[] = [];
+  const handlers = new Map<string, Array<(p: Json) => void>>();
   ws.onmessage = (ev) => {
     const m = JSON.parse(String(ev.data));
+    if (m.method && handlers.has(m.method)) for (const h of handlers.get(m.method)!) h(m.params);
     if (m.id && pending.has(m.id)) {
       const p = pending.get(m.id)!;
       pending.delete(m.id);
@@ -100,6 +106,8 @@ export async function launch(opts: { width?: number; height?: number } = {}): Pr
   const page: Page = {
     logs,
     errors,
+    send: (method, params) => send(method, params ?? {}),
+    on(method, handler) { handlers.set(method, [...(handlers.get(method) ?? []), handler]); },
     async goto(url) {
       await send("Page.navigate", { url });
       await new Promise((r) => setTimeout(r, 500));
@@ -138,8 +146,8 @@ export async function launch(opts: { width?: number; height?: number } = {}): Pr
         return true; })()`);
       if (!ok) throw new Error(`type: no element ${sel}`);
     },
-    async screenshot(path) {
-      const r = await send("Page.captureScreenshot", { format: "png" });
+    async screenshot(path, clip) {
+      const r = await send("Page.captureScreenshot", { format: "png", ...(clip ? { clip: { ...clip, scale: 1 } } : {}) });
       const { writeFileSync } = await import("node:fs");
       writeFileSync(path, Buffer.from(r.data, "base64"));
     },
