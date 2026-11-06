@@ -6,7 +6,7 @@ import SlippageButton from "./SlippageButton";
 import { formatUnits, parseUnits, type Address } from "viem";
 import { useQueryClient } from "@tanstack/react-query";
 import { CHAIN } from "@/lib/ethereum/chains";
-import { ETH, WETH, wrapped, type Token } from "@/lib/tokens";
+import { ETH, FEATURED_TOKENS, WETH, wrapped, type Token } from "@/lib/tokens";
 import { erc20Abi, routerAbi } from "@/lib/uniswap/abis";
 import { getAmountOut, minReceived, priceImpactBps } from "@/lib/uniswap/pricing";
 import { useAllowance, usePair, useQuote, useReadsReady, useTokenBalance, useUrlTokens, useWallet, useAnon } from "@/lib/hooks";
@@ -28,7 +28,7 @@ export default function SwapCard() {
   const anon = useAnon();
   const { ready } = useReadsReady();
   const [from, setFrom] = useState<Token | null>(ETH);
-  const [to, setTo] = useState<Token | null>(WETH);
+  const [to, setTo] = useState<Token | null>(FEATURED_TOKENS[0] ?? WETH);   // ETH -> USDC by default (ETH -> WETH is not a swap)
   const [amount, setAmount] = useState("");
   const { slippageBps: slip, deadlineMin } = useSettings();
   const [tx, setTx] = useState<TxState>({ phase: "idle" });

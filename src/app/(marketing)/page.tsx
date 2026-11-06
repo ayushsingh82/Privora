@@ -28,6 +28,26 @@ const FEATURES = [
   },
 ];
 
+const RISKS = [
+  ["Your identity gets tied to your wallet", "Your wallet address is pseudonymous until a lookup arrives with your IP address and location attached. That one link can turn an anonymous address into a person."],
+  ["Your research becomes a signal", "Which tokens and pools you open, before you ever trade, shows what you are thinking about. That is valuable to anyone who wants to trade against you or target you."],
+  ["A profile is easy to build and hard to undo", "Timing and frequency add up over months. The record sits with a company you never chose, and you cannot see or delete it."],
+  ["Phishing and scams can be aimed", "Knowing which wallet belongs to which person, and what it holds, makes targeted scams and social engineering much more convincing."],
+];
+
+const ALTERNATIVES = [
+  ["A VPN", "Hides your IP from the RPC provider, but you now trust the VPN company with the same picture: who you are and which wallets you check."],
+  ["Mixers and private transfers", "Hide where money moves. They do nothing about the lookups you make before and after, which is where the leak is."],
+  ["Running your own node", "Private, but heavy, slow to sync and out of reach for most people. Most wallets and dapps use a hosted provider by default."],
+  ["Privora", "No new company to trust. Your lookups are wrapped and mixed through Anon-RPC, so the provider receives the question from an anonymous exit, and you can verify it."],
+];
+
+const AUDIENCE = [
+  ["Anyone whose wallet should not be their identity", "Builders, public figures, DAO contributors and everyday users who keep their onchain life separate."],
+  ["Traders who do not want their research tracked", "Look up any token or pool without telling a provider which ones you are watching."],
+  ["Anyone who reads before they sign", "Which is everyone. Every swap starts with balance, allowance and price lookups."],
+];
+
 const EXPOSED = [
   ["Network identity", "Your IP address, rough location and browser accompany every request."],
   ["Wallet addresses", "Each balance and allowance check names a wallet you control."],
@@ -53,6 +73,8 @@ const COVERED = ["Balances and allowances", "Pool reserves, prices and quotes", 
 const NOT_COVERED = ["Signing and sending your transaction", "Your address and trades onchain", "The one-time worker setup read", "Your wallet extension's own traffic"];
 
 const FAQ = [
+  ["Isn't a VPN enough?", "A VPN hides your IP address from the RPC provider, but then the VPN company sees which wallets and tokens you look up, and the link between you and them just moves. Anon-RPC sends your lookups through a mixnet instead, so there is no single company holding that picture."],
+  ["Why not just run my own node?", "You can, and that is private. But a node is heavy to sync and run, and most people use the wallet and dapp defaults. Privora gives that privacy without any setup."],
   ["Does Privora hide my transactions?", "No. Transactions are signed and broadcast by your wallet and are public onchain, like on any dapp. Privora protects the lookups your browser makes before you trade: balances, allowances, pools and quotes."],
   ["Where do prices and quotes come from?", "From the Uniswap V2 router contract itself. Privora calls getAmountsOut onchain for the pool of your pair, or via WETH, through Anon-RPC. There is no price API or aggregator in between."],
   ["Which pools does it use?", "Uniswap V2 pools from the official factory on the connected network, Sepolia by default. The Pools page shows featured pools for popular tokens and the newest pairs, with live reserves."],
@@ -81,7 +103,7 @@ export default function Home() {
             Trade on Uniswap without telling an RPC provider <span className={A}>who you are.</span>
           </h1>
           <p style={{ ["--d" as string]: "160ms" }} className="fade-up mt-6 max-w-xl text-base leading-7 text-neutral-400 sm:text-lg">
-            Privora sends every balance, price and pool lookup through Anon-RPC. The provider serving your data can no longer tie it to you or build a profile of your wallet.
+            Every balance check and price lookup tells an RPC company who you are and which wallets you care about. Privora keeps those lookups private, so the swap stays public and the person behind it does not.
           </p>
           <div style={{ ["--d" as string]: "240ms" }} className="fade-up mt-9 flex flex-wrap justify-center gap-3">
             <Link href="/swap" className="bg-white px-6 py-3 text-sm font-medium text-black transition-colors hover:bg-neutral-200">Open app</Link>
@@ -90,6 +112,66 @@ export default function Home() {
           <p style={{ ["--d" as string]: "320ms" }} className="fade-up mt-6 text-sm text-neutral-500">Non-custodial · Open source · Reads never fall back to a normal RPC</p>
         </div>
       </header>
+
+      {/* Why: the problem in plain words */}
+      <section id="why" className="px-6 py-24">
+        <Reveal className="mx-auto max-w-5xl">
+          <Label>WHY PRIVORA</Label>
+          <h2 className="mb-6 mt-3 max-w-3xl text-3xl font-semibold tracking-tight sm:text-5xl">Your wallet is public. <span className={A}>Who is looking at it should not be.</span></h2>
+          <p className="max-w-2xl text-base leading-7 text-neutral-400 sm:text-lg">
+            Blockchains are open, so anyone can read them. But you do not read them directly. Your wallet app asks an RPC provider for you, and that company learns who asked.
+          </p>
+
+          <div className="mt-12 grid items-start gap-10 lg:grid-cols-2">
+            <div>
+              <Card corners={["tl"]} className="p-7">
+                <p className="text-xs font-semibold tracking-[0.2em] text-neutral-500">AN EVERYDAY VERSION</p>
+                <p className="mt-4 text-lg leading-8">It is like asking a librarian for one specific book, and handing over your ID card to do it. The book is public. <span className={A}>The library does not need to know who asked.</span></p>
+              </Card>
+              <dl className="mt-8 divide-y divide-white/10 border-y border-white/10">
+                {EXPOSED.map(([t, d]) => (
+                  <div key={t} className="grid gap-1 py-4 sm:grid-cols-[9.5rem_1fr] sm:gap-6">
+                    <dt className="font-medium">{t}</dt>
+                    <dd className="text-sm leading-6 text-neutral-400">{d}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+            <ProfileBuild />
+          </div>
+
+          <h3 className="mb-6 mt-20 text-2xl font-semibold tracking-tight">What that makes possible</h3>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {RISKS.map(([t, d], i) => (
+              <Card key={t} corners={[i % 2 === 0 ? "tl" : "br"]} className="p-7">
+                <p className="font-medium">{t}</p>
+                <p className="mt-3 text-sm leading-6 text-neutral-400">{d}</p>
+              </Card>
+            ))}
+          </div>
+
+          <h3 className="mb-2 mt-20 text-2xl font-semibold tracking-tight">Why the usual fixes do not close the gap</h3>
+          <p className="mb-6 max-w-2xl text-sm leading-6 text-neutral-400">Each helps with something. None of them fixes the read path, which is the part every swap starts with.</p>
+          <div className="divide-y divide-white/10 border-y border-white/10">
+            {ALTERNATIVES.map(([t, d], i) => (
+              <div key={t} className={`grid gap-2 py-5 sm:grid-cols-[13rem_1fr] sm:gap-8 ${i === ALTERNATIVES.length - 1 ? "bg-accent/5 px-4" : ""}`}>
+                <p className={`font-medium ${i === ALTERNATIVES.length - 1 ? A : ""}`}>{t}</p>
+                <p className="text-sm leading-6 text-neutral-400">{d}</p>
+              </div>
+            ))}
+          </div>
+
+          <h3 className="mb-6 mt-20 text-2xl font-semibold tracking-tight">Who needs this</h3>
+          <div className="grid gap-4 md:grid-cols-3">
+            {AUDIENCE.map(([t, d]) => (
+              <div key={t} className="bg-[#151515] p-6">
+                <p className="font-medium leading-snug">{t}</p>
+                <p className="mt-3 text-sm leading-6 text-neutral-400">{d}</p>
+              </div>
+            ))}
+          </div>
+        </Reveal>
+      </section>
 
       {/* How it works */}
       <section id="how" className="px-6 py-24">
@@ -121,28 +203,6 @@ export default function Home() {
           <h2 className="mb-4 mt-3 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">The same request, with and without Privora.</h2>
           <p className="mb-10 max-w-2xl text-sm leading-6 text-neutral-400">A normal dapp sends who you are along with every question. Privora strips that at the shield, re-wraps the request and mixes it, so the provider only sees an anonymous exit.</p>
           <Card corners={["tl", "br"]} className="p-4 sm:p-8"><HeroAnimation className="h-auto w-full" /></Card>
-        </Reveal>
-      </section>
-
-      {/* The problem */}
-      <section id="problem" className="px-6 py-24">
-        <Reveal className="mx-auto max-w-5xl">
-          <Label>THE PROBLEM</Label>
-          <h2 className="mb-12 mt-3 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">Every lookup tells an RPC provider who is asking.</h2>
-          <div className="grid items-start gap-10 lg:grid-cols-2">
-            <div>
-              <p className="text-base leading-7 text-neutral-400">Before every trade your wallet app reads the chain: balances, prices, pools. Those reads go to an RPC provider that sees far more than the number it returns.</p>
-              <dl className="mt-8 divide-y divide-white/10 border-y border-white/10">
-                {EXPOSED.map(([t, d]) => (
-                  <div key={t} className="grid gap-1 py-4 sm:grid-cols-[9.5rem_1fr] sm:gap-6">
-                    <dt className="font-medium">{t}</dt>
-                    <dd className="text-sm leading-6 text-neutral-400">{d}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-            <ProfileBuild />
-          </div>
         </Reveal>
       </section>
 

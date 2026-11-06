@@ -22,10 +22,8 @@ export default function WalletButton() {
   const wrong = w.chainId !== null && w.chainId !== CHAIN.id;
   return (
     <div className="relative flex items-center gap-2">
-      {wrong ? (
+      {wrong && (
         <button onClick={switchToAppChain} className="rounded-md bg-bad/15 px-3.5 py-2.5 text-sm font-semibold text-bad hover:bg-bad/25">Switch to {CHAIN.name}</button>
-      ) : (
-        <span className="hidden items-center gap-2 rounded-full bg-card px-3.5 py-2.5 text-sm font-medium sm:flex"><span className="h-2 w-2 rounded-full bg-ok" />{CHAIN.name}</span>
       )}
       <button onClick={() => setOpen((o) => !o)} className="mono flex items-center gap-2 rounded-md bg-card py-2.5 pl-4 pr-3.5 text-sm font-medium transition hover:bg-card2" aria-expanded={open}>
         {short(w.address)}
