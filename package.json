@@ -2,7 +2,7 @@
   "name": "privora",
   "version": "0.1.0",
   "private": true,
-  "description": "Privora — Uniswap V2, powered by Anon-RPC. Swap privately. Read anonymously.",
+  "description": "Privora \u2014 Uniswap V2, powered by Anon-RPC. Swap privately. Read anonymously.",
   "license": "MIT",
   "scripts": {
     "dev": "next dev -p 3200",
@@ -12,7 +12,9 @@
     "e2e": "node --no-warnings scripts/e2e-anon.mts",
     "e2e:ui": "node --no-warnings scripts/e2e-ui.mts",
     "e2e:tx": "node --no-warnings scripts/e2e-tx.mts",
-    "test": "node --test --no-warnings \"src/lib/**/*.test.ts\""
+    "test": "node --test --no-warnings \"src/lib/**/*.test.ts\"",
+    "shots": "node --no-warnings scripts/screenshots.mts",
+    "e2e:sepolia": "node --no-warnings scripts/e2e-sepolia.mts"
   },
   "dependencies": {
     "@anon-rpc/browser-harness": "0.4.0",
