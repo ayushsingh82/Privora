@@ -30,7 +30,7 @@ export default function Settings() {
       <section className="rounded-2xl border border-line bg-card p-5">
         <h2 className="font-semibold">Transaction deadline</h2>
         <div className="mt-3 flex items-center gap-2 text-sm">
-          <input type="number" min={1} max={180} value={s.deadlineMin} onChange={(e) => { const n = Math.floor(Number(e.target.value)); if (n >= 1 && n <= 180) setSettings({ deadlineMin: n }); }} className="mono w-24 rounded-lg border border-line bg-card2 px-3 py-2 outline-none focus:border-accent" />
+          <input type="number" min={1} max={180} value={s.deadlineMin} onChange={(e) => { const n = Math.floor(Number(e.target.value)); if (n >= 1 && n <= 180) setSettings({ deadlineMin: n }); }} className="mono w-24 rounded-lg border border-line bg-card2 px-3 py-2 outline-none focus:border-white/30" />
           <span className="text-muted">minutes</span>
         </div>
       </section>

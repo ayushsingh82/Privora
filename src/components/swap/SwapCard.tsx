@@ -66,7 +66,7 @@ export default function SwapCard() {
     const c = getWalletClient();
     const path = quote.data.path as Address[];
     const deadline = BigInt(Math.floor(Date.now() / 1000) + deadlineMin * 60);
-    const label = `Swap ${from.symbol} → ${to.symbol}`;
+    const label = `Swap ${from.symbol} for ${to.symbol}`;
     const me = w.address;
     type Call = { fn: string; args: unknown[]; value?: bigint };
     const std: Call = from.native
@@ -106,9 +106,9 @@ export default function SwapCard() {
   const flip = () => { clearTx(); setFrom(to); setTo(from); setAmount(""); };
 
   return (
-    <div className="w-full max-w-md rounded-3xl border border-line bg-card p-3 shadow-2xl shadow-black/40">
+    <div className="w-full max-w-md rounded-3xl border border-line bg-card p-4 shadow-2xl shadow-black/50">
       <div className="flex items-center justify-between px-2 pb-2 pt-1">
-        <h2 className="font-semibold">Swap</h2>
+        <h2 className="text-lg font-semibold">Swap</h2>
         <label className="flex items-center gap-1 text-xs text-muted">Slippage
           <select value={slip} onChange={(e) => setSettings({ slippageBps: Number(e.target.value) })} className="rounded-md border border-line bg-card2 px-1.5 py-1 text-fg">
             {[...new Set([10, 50, 100, 300, 1000, 2500, slip])].sort((x, y) => x - y).map((b) => <option key={b} value={b}>{b / 100}%</option>)}
@@ -116,29 +116,29 @@ export default function SwapCard() {
         </label>
       </div>
 
-      <div className="rounded-2xl bg-card2 p-4">
-        <div className="mb-1 text-xs text-muted">You pay</div>
+      <div className="rounded-2xl border border-transparent bg-card2 p-4 transition focus-within:border-white/20 hover:border-white/10">
+        <div className="mb-2 text-sm text-muted">You pay</div>
         <div className="flex items-center gap-2">
-          <input value={amount} onChange={(e) => { clearTx(); setAmount(e.target.value.replace(/[^0-9.]/g, "")); }} inputMode="decimal" placeholder="0.0" className="mono w-full min-w-0 bg-transparent text-3xl outline-none" />
+          <input value={amount} onChange={(e) => { clearTx(); setAmount(e.target.value.replace(/[^0-9.]/g, "")); }} inputMode="decimal" placeholder="0.0" className="mono w-full min-w-0 bg-transparent text-4xl font-medium outline-none placeholder:text-muted/40" />
           <TokenSelect value={from} onChange={(t) => { clearTx(); setFrom(t); }} exclude={to} />
         </div>
-        <div className="mt-1 flex justify-between text-xs text-muted">
+        <div className="mt-2 flex items-center justify-between text-xs text-muted">
           <span>Balance: {fmt(balIn.data, from?.decimals ?? 18)}</span>
-          {balIn.data !== undefined && from && <button className="hover:text-accent" onClick={() => setAmount(formatUnits(from.native && balIn.data! > 10n ** 16n ? balIn.data! - 10n ** 16n : balIn.data!, from.decimals))}>Max</button>}
+          {balIn.data !== undefined && from && <button className="rounded-md bg-accent/15 px-2 py-0.5 font-semibold text-accent hover:bg-accent/25" onClick={() => setAmount(formatUnits(from.native && balIn.data! > 10n ** 16n ? balIn.data! - 10n ** 16n : balIn.data!, from.decimals))}>Max</button>}
         </div>
       </div>
 
       <div className="relative z-10 -my-3 flex justify-center">
-        <button onClick={flip} className="grid h-9 w-9 place-items-center rounded-xl border-4 border-card bg-card2 text-muted hover:text-accent" aria-label="Flip tokens">↓</button>
+        <button onClick={flip} className="grid h-9 w-9 place-items-center rounded-xl border-4 border-card bg-card2 text-muted transition hover:bg-line hover:text-fg" aria-label="Flip tokens"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v10M4 9l4 4 4-4" /></svg></button>
       </div>
 
-      <div className="rounded-2xl bg-card2 p-4">
-        <div className="mb-1 text-xs text-muted">You receive</div>
+      <div className="rounded-2xl border border-transparent bg-card2 p-4 transition focus-within:border-white/20 hover:border-white/10">
+        <div className="mb-2 text-sm text-muted">You receive</div>
         <div className="flex items-center gap-2">
-          <div className="mono w-full min-w-0 truncate text-3xl text-fg/90">{quote.isFetching && amountIn > 0n ? "…" : out > 0n && to ? fmt(out, to.decimals, 8) : "0.0"}</div>
+          <div className="mono w-full min-w-0 truncate text-4xl font-medium text-fg/90">{quote.isFetching && amountIn > 0n ? "…" : out > 0n && to ? fmt(out, to.decimals, 8) : "0.0"}</div>
           <TokenSelect value={to} onChange={(t) => { clearTx(); setTo(t); }} exclude={from} />
         </div>
-        <div className="mt-1 text-xs text-muted">Balance: {fmt(balOut.data, to?.decimals ?? 18)}</div>
+        <div className="mt-2 text-xs text-muted">Balance: {fmt(balOut.data, to?.decimals ?? 18)}</div>
       </div>
 
       {out > 0n && from && to && (
@@ -157,14 +157,16 @@ export default function SwapCard() {
       <button
         disabled={!enabled}
         onClick={() => "fn" in btn && btn.fn?.()}
-        className="mt-3 w-full rounded-2xl bg-accent py-3.5 text-base font-semibold text-accent-fg transition hover:brightness-110 disabled:bg-card2 disabled:text-muted"
+        className="mt-3 w-full rounded-2xl bg-accent py-4 text-base font-semibold text-accent-fg transition hover:brightness-110 disabled:bg-card2 disabled:text-muted"
       >
         {btn.text}
       </button>
       <TxStatus tx={tx} />
-      <p className="mt-3 px-2 text-[11px] leading-snug text-muted">
-        Quotes, balances and allowances are read via <b className="text-fg">{anon.mode === "anon" ? "Anon-RPC" : "Standard RPC (direct)"}</b>. Approve &amp; swap are signed and broadcast by your wallet — not anonymised.
-      </p>
+      <div className="mt-3 flex items-center gap-2 rounded-xl bg-accent/10 px-3 py-2.5 text-xs">
+        <span className={`h-2 w-2 shrink-0 rounded-full ${anon.mode !== "anon" ? "bg-muted" : anon.status === "ready" ? "bg-ok" : anon.status === "failed" ? "bg-bad" : "bg-accent"}`} />
+        <span className="font-semibold text-accent">{anon.mode === "anon" ? "Anon-RPC" : "Standard RPC (direct)"}</span>
+        <span className="text-muted">{anon.mode !== "anon" ? "reads are direct" : anon.status === "ready" ? "active, reads are anonymised" : anon.status === "failed" ? "unavailable" : "starting"}</span>
+      </div>
     </div>
   );
 }

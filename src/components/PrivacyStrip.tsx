@@ -7,18 +7,18 @@ export default function PrivacyStrip() {
   const a = useAnon();
   const state = a.mode === "direct" ? "Standard RPC" : a.status === "ready" ? "Anon-RPC active" : a.status === "failed" ? "Anon-RPC unavailable" : "Anon-RPC starting…";
   const tone = a.mode === "direct" ? "bg-muted" : a.status === "ready" ? "bg-ok" : a.status === "failed" ? "bg-bad" : "bg-accent";
-  const Chip = ({ k, v }: { k: string; v: React.ReactNode }) => (
-    <div className="rounded-xl border border-line bg-card px-4 py-3">
-      <div className="text-[11px] uppercase tracking-wide text-muted">{k}</div>
-      <div className="mono mt-0.5 text-sm">{v}</div>
+  const Stat = ({ k, v, big }: { k: string; v: React.ReactNode; big?: boolean }) => (
+    <div className="bg-card px-5 py-4">
+      <div className="text-[11px] font-medium uppercase tracking-wider text-muted">{k}</div>
+      <div className={`mt-1 ${big ? "mono text-2xl font-semibold" : "text-sm font-medium"}`}>{v}</div>
     </div>
   );
   return (
-    <div className="grid w-full max-w-3xl grid-cols-2 gap-3 md:grid-cols-4">
-      <Chip k="Read transport" v={<span className="flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${tone}`} />{state}</span>} />
-      <Chip k="Anonymised reads" v={a.anonOk} />
-      <Chip k="Direct reads" v={a.directOk + a.directFailed} />
-      <Chip k="Network" v={CHAIN.name} />
+    <div className="grid w-full max-w-3xl grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line md:grid-cols-4">
+      <Stat k="Read transport" v={<span className="flex items-center gap-2"><span className={`h-2.5 w-2.5 rounded-full ${tone}`} />{state}</span>} />
+      <Stat k="Anonymised reads" v={a.anonOk} big />
+      <Stat k="Direct reads" v={a.directOk + a.directFailed} big />
+      <Stat k="Network" v={CHAIN.name} />
     </div>
   );
 }

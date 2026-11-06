@@ -50,27 +50,28 @@ export default function Header() {
   const path = usePathname();
   const w = useWallet();
   return (
-    <header className="border-b border-line">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
-        <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-          <Logo />
+    <header className="sticky top-0 z-30 bg-bg/90 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-5">
+        <Link href="/" className="flex items-center gap-2.5 text-lg font-semibold tracking-tight">
+          <Logo size={36} />
           Privora
         </Link>
         <nav className="order-last flex w-full gap-1 overflow-x-auto text-sm md:order-none md:w-auto">
           {NAV.map((n) => (
-            <Link key={n.href} href={n.href} className={`whitespace-nowrap rounded-lg px-3 py-1.5 ${path === n.href ? "bg-card2 text-fg" : "text-muted hover:text-fg"}`}>
+            <Link key={n.href} href={n.href} className={`whitespace-nowrap rounded-lg px-3.5 py-2 ${path === n.href ? "bg-accent/15 font-semibold text-accent" : "text-muted hover:bg-card2 hover:text-fg"}`}>
               {n.label}
             </Link>
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-3">
-          <ModeToggle />
           {w.address ? (
-            <button onClick={disconnect} className="mono rounded-full border border-line bg-card px-3 py-1.5 text-xs hover:border-accent" title="Disconnect">
+            <button onClick={disconnect} className="mono flex items-center gap-2 rounded-full border border-line bg-card px-4 py-2.5 text-sm transition hover:bg-card2" title="Disconnect">
+              <span className="h-2 w-2 rounded-full bg-ok" />
               {short(w.address)}
             </button>
           ) : (
-            <button onClick={connect} className="rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-accent-fg hover:brightness-110">
+            <button onClick={connect} className="flex items-center gap-2 rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-accent-fg shadow-lg shadow-accent/25 transition hover:brightness-110 active:scale-[.98]">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12V8a2 2 0 0 0-2-2H5a2 2 0 0 1 0-4h13M3 5v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4M16 14h5v-4h-5a2 2 0 0 0 0 4z" /></svg>
               Connect wallet
             </button>
           )}

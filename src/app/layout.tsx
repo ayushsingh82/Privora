@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import PrivacyBanner from "@/components/PrivacyBanner";
 
 export const metadata: Metadata = {
@@ -17,9 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Header />
           <PrivacyBanner />
           <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
-          <footer className="mx-auto max-w-6xl px-4 pb-10 text-xs text-muted">
-            Anon-RPC anonymizes chain <em>reads</em> only. Transactions are signed and sent by your wallet and are public onchain.
-          </footer>
+          <Footer />
         </Providers>
       </body>
     </html>

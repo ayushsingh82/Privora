@@ -21,11 +21,6 @@ export default function PrivacyBanner() {
           </span>
         </div>
       )}
-      {a.mode === "anon" && a.status === "starting" && (
-        <div className="rounded-xl border border-line bg-card px-4 py-3 text-sm text-muted">
-          Starting Anon-RPC worker ({a.networkId}) — verifying hash-pinned code and connecting. Reads begin once it is ready.
-        </div>
-      )}
       {a.mode === "direct" && (
         <div className="rounded-xl border border-accent/30 bg-accent/10 px-4 py-2 text-sm text-accent">
           Standard RPC: reads go directly from your browser to the RPC endpoint, which sees your IP address.

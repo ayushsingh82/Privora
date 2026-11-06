@@ -54,7 +54,7 @@ export default function TokenSelect({ value, onChange, exclude }: { value: Token
             <input
               autoFocus value={q} onChange={(e) => { setQ(e.target.value); setErr(null); }}
               placeholder="Search symbol or paste token address"
-              className="mono w-full rounded-xl border border-line bg-card2 px-3 py-2 text-sm outline-none focus:border-accent"
+              className="mono w-full rounded-xl border border-line bg-card2 px-3 py-2 text-sm outline-none focus:border-white/30"
             />
             <div className="mt-2 max-h-72 overflow-y-auto">
               {list.map((t) => <Row key={t.address} t={t} onPick={pick} />)}
