@@ -36,12 +36,34 @@ Earlier runs failed intermittently, for real reasons:
 - A bug in the test itself (selector matched the header "Swap" link) — fixed.
 - Other networks: tor-js did not boot within 150 s (demo gateway); Nym booted in ~36 s but reads timed out (~24 s).
 
+## Wallet-signed transactions — `npm run e2e:tx` (anvil fork of Sepolia, real UI, Standard mode)
+
+The real app is built against a local anvil fork (`NEXT_PUBLIC_RPC_URL_SEPOLIA=http://127.0.0.1:8545`) and driven in
+headless Chrome. The wallet is a **test-only EIP-1193 stub injected by the test script** that forwards to anvil's
+unlocked dev account; the app code is unchanged. No real network or funds are involved.
+
+| Step | Result |
+| --- | --- |
+| Swap ETH → token (`swapExactETHForTokens`), token balance verified onchain | pass |
+| Approve exact amount (allowance verified == 50e18, **not unlimited**) + sell token → ETH | pass |
+| Add liquidity ETH + token (auto-paired amount, approve, `addLiquidityETH`), LP tokens verified onchain | pass |
+| Remove 50% (LP approve + `removeLiquidityETH`), LP balance halved onchain | pass |
+
+Bugs this found and fixed (all real, user-facing): success status vanished instantly after a swap; fee-on-transfer
+("taxed", here 20%) tokens reverted with `UniswapV2: K` → now simulated first and routed to the router's
+`SupportingFeeOnTransferTokens` variants; out-of-gas on tokens with extra transfer logic → gas now estimated via the
+read path with a 30% buffer. Doomed transactions are no longer sent to the wallet.
+
+Limitation: the fork test runs in Standard mode (the mixnet exit cannot reach localhost). Anonymised reads and
+wallet-signed writes are each tested, but not in the same run against a public network.
+
 ## Not tested (be honest)
 
 | Area | Status |
 | --- | --- |
-| Wallet connect / approve / swap / add / remove / remove-liquidity execution | Implemented against the real contracts and type-checked; **not executed** (needs a funded Sepolia wallet; no wallet automation here) |
-| Allowance and LP-position reads in the UI | Same read path as tested balances/quotes; not exercised with a connected account |
+| A real browser wallet extension (MetaMask/Rabby) | Only a stub EIP-1193 provider was used; real-extension prompts/network switching not exercised |
+| ERC-20 → ERC-20 swaps and non-ETH `addLiquidity`/`removeLiquidity` | Same code path family, but not executed in tests (ETH-pair flows were) |
+| Public-network transactions | Not run; fork only |
 | Mobile layout | Visually checked at 390–500 px screenshots only |
 | Mainnet | Contract addresses verified onchain; no UI run on mainnet |
 | Anon-RPC network anonymity properties | Out of scope: we test routing/transport, not the network's guarantees |

@@ -84,6 +84,7 @@ npm test          # unit: V2 math vectors + fail-closed/transport tests (no netw
 npm run typecheck
 npm run build && npm start   # in one shell, then:
 npm run e2e       # real headless Chrome: worker boot, anonymised quote, direct mode, fail-closed
+npm run e2e:tx    # real UI on a local anvil Sepolia fork: swap, approve, add & remove liquidity (see script header)
 ```
 
 `npm run e2e` needs Google Chrome (override with `CHROME=/path`). Results: [docs/TEST_REPORT.md](docs/TEST_REPORT.md).
@@ -100,8 +101,8 @@ npm run e2e       # real headless Chrome: worker boot, anonymised quote, direct 
 - Writes (approve/swap/add/remove) and the wallet's own RPC are **not** anonymised.
 - The worker bootstrap (one read of the network's specifier contract) is a direct, non-anonymised request, and the
   page/JS load itself reveals your IP to the host. Both are shown in the Privacy Center.
-- Wallet-signed flows were implemented against the real contracts but could not be executed in CI without a funded
-  wallet; they are not covered by the automated tests (see test report).
+- Wallet-signed flows are tested on a local Sepolia fork with a stub wallet, not with a real extension or a public
+  network (see test report). ERC-20↔ERC-20 swaps are implemented but not covered by the tx e2e.
 - Token symbols/names are read from the contract and sanitised but are still user-controlled strings: verify addresses.
 - Sepolia Uniswap V2 pools are test pools with arbitrary liquidity.
 
