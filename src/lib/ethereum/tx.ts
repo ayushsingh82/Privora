@@ -26,3 +26,20 @@ export async function runTx(label: string, send: () => Promise<Hash>, set: (s: T
     return false;
   }
 }
+
+/**
+ * Picks the first candidate whose simulation (an eth_call through the READ transport) succeeds, so a doomed
+ * transaction is never sent to the wallet. Throws the LAST candidate's error if none succeed (the most specific one).
+ */
+export async function firstValid<A>(cands: A[], sim: (a: A) => Promise<unknown>): Promise<A> {
+  let last: unknown;
+  for (const c of cands) {
+    try { await sim(c); return c; } catch (e) { last = e; }
+  }
+  throw last;
+}
+
+/** Gas estimate (+30%) via the READ transport. Tokens with transfer fees/hooks routinely under-estimate; undefined = let the wallet decide. */
+export async function bufferedGas(est: () => Promise<bigint>): Promise<bigint | undefined> {
+  try { return ((await est()) * 130n) / 100n; } catch { return undefined; }
+}

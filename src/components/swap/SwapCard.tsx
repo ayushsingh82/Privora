@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { formatUnits, parseUnits, type Address } from "viem";
 import { useQueryClient } from "@tanstack/react-query";
 import { CHAIN } from "@/lib/ethereum/chains";
@@ -8,7 +8,8 @@ import { erc20Abi, routerAbi } from "@/lib/uniswap/abis";
 import { getAmountOut, minReceived, priceImpactBps } from "@/lib/uniswap/pricing";
 import { useAllowance, usePair, useQuote, useReadsReady, useTokenBalance, useUrlTokens, useWallet, useAnon } from "@/lib/hooks";
 import { connect, getWalletClient, switchToAppChain } from "@/lib/ethereum/wallet";
-import { runTx, type TxState } from "@/lib/ethereum/tx";
+import { bufferedGas, firstValid, runTx, type TxState } from "@/lib/ethereum/tx";
+import { readClient } from "@/lib/ethereum/read-client";
 import TokenSelect from "../TokenSelect";
 import TxStatus from "../TxStatus";
 
@@ -38,7 +39,8 @@ export default function SwapCard() {
   const pair = usePair(direct ? from : null, direct ? to : null);
   const allowance = useAllowance(from, w.address, CHAIN.router);
 
-  useEffect(() => { setTx((t) => (t.phase === "pending" || t.phase === "wallet" ? t : { phase: "idle" })); }, [from, to, amount]);
+  // Clear a finished/failed status when the USER changes the form (not when we reset the amount after a success).
+  const clearTx = () => setTx((t) => (t.phase === "pending" || t.phase === "wallet" ? t : { phase: "idle" }));
 
   const out = quote.data?.out ?? 0n;
   const impact = pair.data && direct ? priceImpactBps(amountIn, getAmountOut(amountIn, pair.data.reserveA, pair.data.reserveB), pair.data.reserveA, pair.data.reserveB) : null;
@@ -64,12 +66,24 @@ export default function SwapCard() {
     const path = quote.data.path as Address[];
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 20 * 60);
     const label = `Swap ${from.symbol} → ${to.symbol}`;
-    const send = () =>
-      from.native
-        ? c.writeContract({ address: CHAIN.router, abi: routerAbi, functionName: "swapExactETHForTokens", args: [minOut, path, w.address!, deadline], value: amountIn })
-        : to.native
-          ? c.writeContract({ address: CHAIN.router, abi: routerAbi, functionName: "swapExactTokensForETH", args: [amountIn, minOut, path, w.address!, deadline] })
-          : c.writeContract({ address: CHAIN.router, abi: routerAbi, functionName: "swapExactTokensForTokens", args: [amountIn, minOut, path, w.address!, deadline] });
+    const me = w.address;
+    type Call = { fn: string; args: unknown[]; value?: bigint };
+    const std: Call = from.native
+      ? { fn: "swapExactETHForTokens", args: [minOut, path, me, deadline], value: amountIn }
+      : to.native
+        ? { fn: "swapExactTokensForETH", args: [amountIn, minOut, path, me, deadline] }
+        : { fn: "swapExactTokensForTokens", args: [amountIn, minOut, path, me, deadline] };
+    // Taxed / fee-on-transfer tokens make the standard functions revert ("UniswapV2: K"): use the router's
+    // SupportingFeeOnTransferTokens variant when (and only when) the standard call fails simulation.
+    const fee: Call = { ...std, fn: `${std.fn}SupportingFeeOnTransferTokens` };
+    const send = async () => {
+      const call = await firstValid([std, fee], (x) =>
+        readClient.simulateContract({ address: CHAIN.router, abi: routerAbi, functionName: x.fn, args: x.args, account: me, value: x.value } as never),
+      ).catch((e) => { throw new Error(`Swap would fail: ${(e as { shortMessage?: string }).shortMessage ?? (e as Error).message}. If this token charges a transfer fee, raise slippage above that fee.`); });
+      const req = { address: CHAIN.router, abi: routerAbi, functionName: call.fn, args: call.args, value: call.value } as never;
+      const gas = await bufferedGas(() => readClient.estimateContractGas({ ...(req as object), account: me } as never));
+      return c.writeContract({ ...(req as object), ...(gas ? { gas } : {}) } as never);
+    };
     if (await runTx(label, send, setTx)) { setAmount(""); refetch(); }
   }
 
@@ -88,7 +102,7 @@ export default function SwapCard() {
   })();
   const enabled = "fn" in btn && (btn.fn === connect || btn.fn === switchToAppChain || ("enabled" in btn && btn.enabled));
 
-  const flip = () => { setFrom(to); setTo(from); setAmount(""); };
+  const flip = () => { clearTx(); setFrom(to); setTo(from); setAmount(""); };
 
   return (
     <div className="w-full max-w-md rounded-3xl border border-line bg-card p-3 shadow-2xl shadow-black/40">
@@ -96,7 +110,7 @@ export default function SwapCard() {
         <h2 className="font-semibold">Swap</h2>
         <label className="flex items-center gap-1 text-xs text-muted">Slippage
           <select value={slip} onChange={(e) => setSlip(Number(e.target.value))} className="rounded-md border border-line bg-card2 px-1.5 py-1 text-fg">
-            {[10, 50, 100, 300].map((b) => <option key={b} value={b}>{b / 100}%</option>)}
+            {[10, 50, 100, 300, 1000, 2500].map((b) => <option key={b} value={b}>{b / 100}%</option>)}
           </select>
         </label>
       </div>
@@ -104,8 +118,8 @@ export default function SwapCard() {
       <div className="rounded-2xl bg-card2 p-4">
         <div className="mb-1 text-xs text-muted">You pay</div>
         <div className="flex items-center gap-2">
-          <input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))} inputMode="decimal" placeholder="0.0" className="mono w-full min-w-0 bg-transparent text-3xl outline-none" />
-          <TokenSelect value={from} onChange={setFrom} exclude={to} />
+          <input value={amount} onChange={(e) => { clearTx(); setAmount(e.target.value.replace(/[^0-9.]/g, "")); }} inputMode="decimal" placeholder="0.0" className="mono w-full min-w-0 bg-transparent text-3xl outline-none" />
+          <TokenSelect value={from} onChange={(t) => { clearTx(); setFrom(t); }} exclude={to} />
         </div>
         <div className="mt-1 flex justify-between text-xs text-muted">
           <span>Balance: {fmt(balIn.data, from?.decimals ?? 18)}</span>
@@ -121,7 +135,7 @@ export default function SwapCard() {
         <div className="mb-1 text-xs text-muted">You receive</div>
         <div className="flex items-center gap-2">
           <div className="mono w-full min-w-0 truncate text-3xl text-fg/90">{quote.isFetching && amountIn > 0n ? "…" : out > 0n && to ? fmt(out, to.decimals, 8) : "0.0"}</div>
-          <TokenSelect value={to} onChange={setTo} exclude={from} />
+          <TokenSelect value={to} onChange={(t) => { clearTx(); setTo(t); }} exclude={from} />
         </div>
         <div className="mt-1 text-xs text-muted">Balance: {fmt(balOut.data, to?.decimals ?? 18)}</div>
       </div>
@@ -136,6 +150,7 @@ export default function SwapCard() {
         </dl>
       )}
 
+      {slip >= 500 && <p className="mt-2 px-2 text-xs text-accent">High slippage ({slip / 100}%): you may receive far less than quoted and the trade can be sandwiched. Needed only for tokens that charge a transfer fee.</p>}
       {quote.isError && amountIn > 0n && <p className="mt-2 px-2 text-xs text-bad">{(quote.error as Error).message}</p>}
 
       <button

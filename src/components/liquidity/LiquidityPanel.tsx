@@ -8,7 +8,8 @@ import { erc20Abi, routerAbi } from "@/lib/uniswap/abis";
 import { minReceived, quote as proportional } from "@/lib/uniswap/pricing";
 import { useAllowance, useLpBalance, usePair, useReadsReady, useTokenBalance, useUrlTokens, useWallet } from "@/lib/hooks";
 import { connect, getWalletClient, switchToAppChain } from "@/lib/ethereum/wallet";
-import { runTx, type TxState } from "@/lib/ethereum/tx";
+import { bufferedGas, firstValid, runTx, type TxState } from "@/lib/ethereum/tx";
+import { readClient } from "@/lib/ethereum/read-client";
 import TokenSelect from "../TokenSelect";
 import TxStatus from "../TxStatus";
 import { parse } from "../swap/SwapCard";
@@ -68,11 +69,15 @@ export default function LiquidityPanel() {
     if (!A || !B || !w.address) return;
     const c = getWalletClient();
     const me = w.address;
-    const send = () =>
-      A.native || B.native
-        ? (() => { const tok = A.native ? B : A; const tAmt = A.native ? inB : inA; const eAmt = A.native ? inA : inB;
-            return c.writeContract({ address: CHAIN.router, abi: routerAbi, functionName: "addLiquidityETH", args: [tok.address, tAmt, minReceived(tAmt, slip), minReceived(eAmt, slip), me, deadline()], value: eAmt }); })()
-        : c.writeContract({ address: CHAIN.router, abi: routerAbi, functionName: "addLiquidity", args: [A.address, B.address, inA, inB, minReceived(inA, slip), minReceived(inB, slip), me, deadline()] });
+    const send = async () => {
+      if (A.native || B.native) {
+        const tok = A.native ? B : A; const tAmt = A.native ? inB : inA; const eAmt = A.native ? inA : inB;
+        const req = { address: CHAIN.router, abi: routerAbi, functionName: "addLiquidityETH", args: [tok.address, tAmt, minReceived(tAmt, slip), minReceived(eAmt, slip), me, deadline()], value: eAmt } as never;
+        const gas = await bufferedGas(() => readClient.estimateContractGas({ ...(req as object), account: me } as never));
+        return c.writeContract({ ...(req as object), ...(gas ? { gas } : {}) } as never);
+      }
+      return c.writeContract({ address: CHAIN.router, abi: routerAbi, functionName: "addLiquidity", args: [A.address, B.address, inA, inB, minReceived(inA, slip), minReceived(inB, slip), me, deadline()] });
+    };
     if (await runTx(`Add ${A.symbol}/${B.symbol} liquidity`, send, setTx)) { setAmtA(""); setAmtB(""); refetch(); }
   }
 
@@ -86,11 +91,19 @@ export default function LiquidityPanel() {
     if (!A || !B || !pool || !w.address) return;
     const c = getWalletClient();
     const me = w.address;
-    const send = () =>
-      A.native || B.native
-        ? (() => { const tok = A.native ? B : A; const tA = A.native ? rmB : rmA; const eA = A.native ? rmA : rmB;
-            return c.writeContract({ address: CHAIN.router, abi: routerAbi, functionName: "removeLiquidityETH", args: [tok.address, rmLiq, minReceived(tA, slip), minReceived(eA, slip), me, deadline()] }); })()
-        : c.writeContract({ address: CHAIN.router, abi: routerAbi, functionName: "removeLiquidity", args: [wrapped(A), wrapped(B), rmLiq, minReceived(rmA, slip), minReceived(rmB, slip), me, deadline()] });
+    const send = async () => {
+      if (A.native || B.native) {
+        const tok = A.native ? B : A; const tA = A.native ? rmB : rmA; const eA = A.native ? rmA : rmB;
+        const args = [tok.address, rmLiq, minReceived(tA, slip), minReceived(eA, slip), me, deadline()];
+        const fn = await firstValid(["removeLiquidityETH", "removeLiquidityETHSupportingFeeOnTransferTokens"], (f) =>
+          readClient.simulateContract({ address: CHAIN.router, abi: routerAbi, functionName: f, args, account: me } as never),
+        ).catch((e) => { throw new Error(`Remove would fail: ${(e as { shortMessage?: string }).shortMessage ?? (e as Error).message}`); });
+        const req = { address: CHAIN.router, abi: routerAbi, functionName: fn, args } as never;
+        const gas = await bufferedGas(() => readClient.estimateContractGas({ ...(req as object), account: me } as never));
+        return c.writeContract({ ...(req as object), ...(gas ? { gas } : {}) } as never);
+      }
+      return c.writeContract({ address: CHAIN.router, abi: routerAbi, functionName: "removeLiquidity", args: [wrapped(A), wrapped(B), rmLiq, minReceived(rmA, slip), minReceived(rmB, slip), me, deadline()] });
+    };
     if (await runTx(`Remove ${A.symbol}/${B.symbol} liquidity`, send, setTx)) refetch();
   }
   async function approveLp() {
