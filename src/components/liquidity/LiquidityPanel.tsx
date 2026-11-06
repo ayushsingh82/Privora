@@ -133,7 +133,7 @@ export default function LiquidityPanel() {
       <div className="rounded-3xl border border-line bg-card p-3">
         <h2 className="px-2 pb-2 pt-1 font-semibold">Add liquidity</h2>
         {([[A, setA, amtA, editA, balA, B], [B, setB, amtB, editB, balB, A]] as const).map(([tok, setTok, amt, edit, bal, other], i) => (
-          <div key={i} className="mb-2 rounded-2xl bg-card2 p-4">
+          <div key={i} className="mb-2 rounded-2xl border border-line bg-card2 p-4">
             <div className="flex items-center gap-2">
               <input value={amt} onChange={(e) => edit(e.target.value)} placeholder="0.0" inputMode="decimal" className="mono w-full min-w-0 bg-transparent text-2xl outline-none" />
               <TokenSelect value={tok} onChange={setTok} exclude={other} />

@@ -16,8 +16,8 @@ export default function PrivacyBanner() {
           <span className="font-medium text-bad">Anon-RPC unavailable — reads are blocked.</span>
           <span className="text-muted">{a.error}. Privora will not fall back to direct RPC on its own.</span>
           <span className="ml-auto flex gap-2">
-            <button onClick={() => startWorker().catch(() => {})} className="rounded-lg border border-line px-3 py-1 hover:border-accent">Retry</button>
-            <button onClick={() => setReadMode("direct")} className="rounded-lg border border-line px-3 py-1 hover:border-accent">Use Standard RPC</button>
+            <button onClick={() => startWorker().catch(() => {})} className="rounded-lg border border-line px-3 py-1 hover:border-white/30">Retry</button>
+            <button onClick={() => setReadMode("direct")} className="rounded-lg border border-line px-3 py-1 hover:border-white/30">Use Standard RPC</button>
           </span>
         </div>
       )}

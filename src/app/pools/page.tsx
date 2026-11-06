@@ -64,7 +64,7 @@ export default function Pools() {
         <div className="grid gap-3 md:grid-cols-2">{list.data?.pages.flatMap((p) => p.pools).map((p) => <PoolCard key={p.pair} p={p} />)}</div>
         {list.isFetching && !list.data && <div className="grid gap-3 md:grid-cols-2">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton h-44" />)}</div>}
         {list.isFetching && !!list.data && <p className="mt-3 text-sm text-muted">Loading more…</p>}
-        {list.hasNextPage && !list.isFetching && <button onClick={() => list.fetchNextPage()} className="mt-4 rounded-xl border border-line px-4 py-2 text-sm hover:border-accent">Load more</button>}
+        {list.hasNextPage && !list.isFetching && <button onClick={() => list.fetchNextPage()} className="mt-4 rounded-xl border border-line px-4 py-2 text-sm hover:border-white/30">Load more</button>}
       </div>
     </div>
   );

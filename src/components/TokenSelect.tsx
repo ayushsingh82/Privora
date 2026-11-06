@@ -44,7 +44,7 @@ export default function TokenSelect({ value, onChange, exclude }: { value: Token
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className="flex shrink-0 items-center gap-2 rounded-full border border-line bg-card2 px-3 py-1.5 text-sm font-semibold hover:border-accent">
+      <button onClick={() => setOpen(true)} className="flex shrink-0 items-center gap-2 rounded-full border border-line bg-card2 px-3 py-1.5 text-sm font-semibold hover:border-white/30">
         {value ? value.symbol : "Select token"} <span className="text-muted">▾</span>
       </button>
       {open && (

@@ -13,8 +13,8 @@ export default function PoolCard({ p }: { p: Pool }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="text-lg font-semibold">{p.token0.symbol} / {p.token1.symbol}</div>
         <div className="flex gap-2 text-xs">
-          <Link href={`/liquidity?a=${p.token0.address}&b=${p.token1.address}`} className="rounded-lg border border-line px-2.5 py-1 hover:border-accent">Add liquidity</Link>
-          <Link href={`/?from=${p.token0.address}&to=${p.token1.address}`} className="rounded-lg border border-line px-2.5 py-1 hover:border-accent">Swap</Link>
+          <Link href={`/liquidity?a=${p.token0.address}&b=${p.token1.address}`} className="rounded-lg border border-line px-2.5 py-1 hover:border-white/30">Add liquidity</Link>
+          <Link href={`/?from=${p.token0.address}&to=${p.token1.address}`} className="rounded-lg border border-line px-2.5 py-1 hover:border-white/30">Swap</Link>
         </div>
       </div>
       <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted">

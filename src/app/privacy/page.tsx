@@ -3,7 +3,7 @@ import { useAnon } from "@/lib/hooks";
 import { CHAIN } from "@/lib/ethereum/chains";
 import { getNetwork, NETWORKS } from "@/lib/anon-rpc/networks";
 import { ModeToggle } from "@/components/Header";
-import { killWorker, setReadMode, startWorker } from "@/lib/anon-rpc/manager";
+import { killWorker, startWorker } from "@/lib/anon-rpc/manager";
 
 const LABEL = { anon: "Anon-RPC", direct: "Direct RPC", bootstrap: "Direct (bootstrap)" } as const;
 const ago = (t: number | null) => (t ? `${Math.max(0, Math.round((Date.now() - t) / 1000))}s ago` : "—");
@@ -81,10 +81,7 @@ export default function PrivacyCenter() {
           >
             {NETWORKS.map((n) => <option key={n.id} value={n.id}>{n.label}</option>)}
           </select>
-          <button onClick={() => startWorker().catch(() => {})} className="rounded-lg border border-line px-3 py-2 hover:border-accent">Restart worker</button>
-          <button onClick={() => setReadMode(a.mode === "anon" ? "direct" : "anon")} className="rounded-lg border border-line px-3 py-2 hover:border-accent">
-            Switch to {a.mode === "anon" ? "Standard" : "Anon-RPC"}
-          </button>
+          <button onClick={() => startWorker().catch(() => {})} className="rounded-lg border border-line px-3 py-2 hover:border-white/30">Restart worker</button>
           <button onClick={killWorker} className="rounded-lg border border-bad/50 px-3 py-2 text-bad hover:bg-bad/10" title="Demonstrates fail-closed: reads then fail visibly, never fall back to direct">
             Kill worker (fail-closed demo)
           </button>

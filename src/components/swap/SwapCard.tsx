@@ -116,7 +116,7 @@ export default function SwapCard() {
         </label>
       </div>
 
-      <div className="rounded-2xl border border-transparent bg-card2 p-4 transition focus-within:border-white/20 hover:border-white/10">
+      <div className="rounded-2xl border border-line bg-card2 p-4">
         <div className="mb-2 text-sm text-muted">You pay</div>
         <div className="flex items-center gap-2">
           <input value={amount} onChange={(e) => { clearTx(); setAmount(e.target.value.replace(/[^0-9.]/g, "")); }} inputMode="decimal" placeholder="0.0" className="mono w-full min-w-0 bg-transparent text-4xl font-medium outline-none placeholder:text-muted/40" />
@@ -132,7 +132,7 @@ export default function SwapCard() {
         <button onClick={flip} className="grid h-9 w-9 place-items-center rounded-xl border-4 border-card bg-card2 text-muted transition hover:bg-line hover:text-fg" aria-label="Flip tokens"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v10M4 9l4 4 4-4" /></svg></button>
       </div>
 
-      <div className="rounded-2xl border border-transparent bg-card2 p-4 transition focus-within:border-white/20 hover:border-white/10">
+      <div className="rounded-2xl border border-line bg-card2 p-4">
         <div className="mb-2 text-sm text-muted">You receive</div>
         <div className="flex items-center gap-2">
           <div className="mono w-full min-w-0 truncate text-4xl font-medium text-fg/90">{quote.isFetching && amountIn > 0n ? "…" : out > 0n && to ? fmt(out, to.decimals, 8) : "0.0"}</div>

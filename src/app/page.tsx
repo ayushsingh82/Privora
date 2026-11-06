@@ -7,6 +7,26 @@ const STEPS = [
   { n: "03", t: "Verify it yourself", d: "The Privacy Center logs every request: which transport carried it, whether it worked, how long it took." },
 ];
 
+function Head({ eyebrow, title, sub }: { eyebrow: string; title: string; sub?: string }) {
+  return (
+    <div className="mx-auto max-w-2xl text-center">
+      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">{eyebrow}</div>
+      <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-4xl">{title}</h2>
+      {sub && <p className="mt-3 text-sm leading-relaxed text-muted md:text-base">{sub}</p>}
+    </div>
+  );
+}
+
+function Node({ t, d, hot }: { t: string; d: string; hot?: boolean }) {
+  return (
+    <div className={`min-w-[8.5rem] flex-1 rounded-2xl border p-4 text-center ${hot ? "border-accent/50 bg-accent/10" : "border-line bg-card"}`}>
+      <div className={`text-sm font-semibold ${hot ? "text-accent" : ""}`}>{t}</div>
+      <div className="mt-1 text-xs text-muted">{d}</div>
+    </div>
+  );
+}
+const Wire = ({ hot }: { hot?: boolean }) => <div className={`mx-1 hidden h-0.5 w-6 shrink-0 rounded md:block ${hot ? "bg-accent" : "bg-line"}`} />;
+
 type Tone = "good" | "bad" | "neutral";
 const COMPARE: [string, string, Tone, string, Tone][] = [
   ["Your IP next to wallet queries", "Visible to the RPC provider", "bad", "Hidden behind the Anon-RPC network", "good"],
@@ -48,7 +68,7 @@ const FAQ = [
 
 export default function Home() {
   return (
-    <div id="top" className="flex flex-col items-center gap-16">
+    <div id="top" className="flex flex-col items-center gap-24">
       <section className="flex flex-col items-center gap-8">
         <div className="text-center">
           <span className="rounded-full border border-line bg-card px-3 py-1 text-xs text-muted">Uniswap V2 · powered by Anon-RPC</span>
@@ -62,10 +82,10 @@ export default function Home() {
       </section>
 
       <section className="w-full">
-        <h2 className="text-center text-2xl font-semibold tracking-tight md:text-3xl">How it works</h2>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <Head eyebrow="How it works" title="Three steps, one clear boundary" sub="Reads go through the mixnet. Signing stays with your wallet. You can check both." />
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
           {STEPS.map((s) => (
-            <div key={s.n} className="rounded-2xl border border-line bg-card p-6 transition hover:border-accent/50">
+            <div key={s.n} className="rounded-2xl border border-line bg-card p-6 transition hover:border-white/20">
               <div className="mono text-3xl font-semibold text-accent/70">{s.n}</div>
               <h3 className="mt-3 text-lg font-semibold">{s.t}</h3>
               <p className="mt-1 text-sm leading-relaxed text-muted">{s.d}</p>
@@ -75,8 +95,34 @@ export default function Home() {
       </section>
 
       <section className="w-full">
-        <h2 className="text-center text-2xl font-semibold tracking-tight md:text-3xl">A normal dapp vs. Privora</h2>
-        <div className="mt-6 overflow-x-auto rounded-2xl border border-line bg-card">
+        <Head eyebrow="The path" title="Where each request goes" />
+        <div className="mt-8 space-y-4 rounded-3xl border border-line bg-card p-5 md:p-6">
+          <div>
+            <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-accent"><span className="h-2 w-2 rounded-full bg-accent" />Reads (anonymised)</div>
+            <div className="flex flex-col items-stretch gap-3 md:flex-row md:items-center md:gap-0">
+              <Node t="Your browser" d="Balances, quotes, reserves" />
+              <Wire hot />
+              <Node t="Anon-RPC worker" d="Hash-pinned, sandboxed" hot />
+              <Wire hot />
+              <Node t="Mixnet exit" d="The RPC sees this, not your IP" hot />
+              <Wire />
+              <Node t="Ethereum RPC" d="Uniswap V2 data" />
+            </div>
+          </div>
+          <div className="border-t border-line pt-4">
+            <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted"><span className="h-2 w-2 rounded-full bg-muted" />Writes (not anonymised)</div>
+            <div className="flex flex-col items-stretch gap-3 md:flex-row md:items-center md:gap-0">
+              <Node t="Your wallet" d="Approve, swap, add, remove" />
+              <Wire />
+              <Node t="Ethereum" d="Public onchain, as always" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="w-full">
+        <Head eyebrow="Compare" title="A normal dapp vs. Privora" />
+        <div className="mt-8 overflow-x-auto rounded-2xl border border-line bg-card">
           <div className="grid min-w-[36rem] grid-cols-[1.1fr_1fr_1fr] text-sm">
             <div className="p-4" />
             <div className="p-4 text-xs font-medium uppercase tracking-wider text-muted">Typical dapp</div>
@@ -92,9 +138,11 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="grid w-full gap-4 md:grid-cols-2">
+      <section className="w-full">
+        <Head eyebrow="Built in" title="Privacy that fails safe" />
+        <div className="mt-8 grid gap-4 md:grid-cols-2">
         {FEATURES.map((f) => (
-          <div key={f.t} className="flex gap-4 rounded-2xl border border-line bg-card p-6 transition hover:border-accent/50">
+          <div key={f.t} className="flex gap-4 rounded-2xl border border-line bg-card p-6 transition hover:border-white/20">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent/15 text-accent">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={ICONS[f.i]} /></svg>
             </span>
@@ -104,17 +152,18 @@ export default function Home() {
             </div>
           </div>
         ))}
+        </div>
       </section>
 
       <section className="w-full max-w-3xl">
-        <h2 className="text-center text-2xl font-semibold tracking-tight md:text-3xl">Questions</h2>
-        <div className="mt-6 space-y-3">
+        <Head eyebrow="FAQ" title="Questions" />
+        <div className="mt-8 space-y-3">
           {FAQ.map(([q, a]) => (
-            <details key={q} className="group rounded-2xl border border-line bg-card px-5 py-4">
+            <details key={q} open={q === FAQ[0][0]} className="group rounded-2xl border border-line bg-card px-5 py-4 open:bg-card2/40">
               <summary className="flex cursor-pointer list-none items-center justify-between font-medium">
                 {q}<span className="text-accent transition group-open:rotate-45">+</span>
               </summary>
-              <p className="mt-2 text-sm text-muted">{a}</p>
+              <p className="mt-3 text-sm leading-relaxed text-muted">{a}</p>
             </details>
           ))}
         </div>
