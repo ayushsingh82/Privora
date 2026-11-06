@@ -54,7 +54,14 @@ const step = async (name: string, fn: () => Promise<void>) => {
 const text = () => p.eval<string>("document.body.innerText");
 const rpc = async (method: string, params: unknown[] = []) => (await (await fetch(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) })).json()).result;
 
+let loaded = false;
 async function load(path: string) {
+  if (loaded) {
+    // Navigate inside the app: a full reload would restart the Anon-RPC worker (slow on a public mixnet) and drop the wallet.
+    await p.eval(`window.next.router.push(${JSON.stringify(path)}); true`);
+    await p.waitFor("document.querySelector('input[inputmode=decimal]') !== null", 30000, "page ready");
+    return;
+  }
   await p.goto(BASE + path);
   await p.waitFor("Object.keys(document.querySelector('a,button')).some(k=>k.startsWith('__react'))", 30000, "hydration");
   await p.waitFor("document.body.innerText.includes('reads are anonymised')", 180000, "Anon-RPC worker ready");
@@ -65,6 +72,7 @@ async function load(path: string) {
       on() {} }; true`);
   await p.click("Connect wallet");
   await p.waitFor(`document.body.innerText.includes('${ME.slice(0, 6)}')`, 15000, "wallet connected");
+  loaded = true;
 }
 // click the big action button (class w-full) by label, never the header nav links
 const act = (label: string) => p.eval<boolean>(`(()=>{const b=[...document.querySelectorAll('button')].find(b=>b.className.includes('w-full')&&b.textContent.trim().startsWith(${JSON.stringify(label)})&&!b.disabled);if(!b)return false;b.click();return true})()`);
