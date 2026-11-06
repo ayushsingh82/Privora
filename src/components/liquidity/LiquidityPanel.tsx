@@ -1,4 +1,5 @@
 "use client";
+import LiveReads from "@/components/LiveReads";
 import { useCallback, useState, useEffect, useRef } from "react";
 import { formatUnits } from "viem";
 import { useQueryClient } from "@tanstack/react-query";
@@ -166,6 +167,7 @@ export default function LiquidityPanel() {
         <button disabled={!addBtn.on} onClick={() => addBtn.fn?.()} className="mt-3 w-full rounded-none bg-accent py-3.5 font-semibold text-accent-fg hover:brightness-110 disabled:bg-card2 disabled:text-muted">{addBtn.text}</button>
       </div>
 
+      <div className="space-y-6">
       <div className="rounded-none border border-line bg-card p-3">
         <h2 className="px-2 pb-2 pt-1 font-semibold">Your position</h2>
         {!w.address ? <p className="p-3 text-sm text-muted">Connect a wallet to see your LP position.</p>
@@ -186,6 +188,8 @@ export default function LiquidityPanel() {
               </button>
             </div>
           )}
+      </div>
+      <LiveReads wide />
       </div>
       <div className="lg:col-span-2"><TxStatus tx={tx} />
         <p className="mt-3 text-[11px] text-muted">Balances, reserves, allowances and LP positions are read via the active privacy transport. Approvals, adds and removals are signed and sent by your wallet (not anonymised). Approvals are for the exact amount.</p>
