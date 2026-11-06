@@ -45,6 +45,23 @@ await step("Privacy Center: anonymised reads > 0, direct reads = 0, rows labelle
   console.log(`      anonymised reads: ${ok}, direct reads: ${direct}, eth_call rows: ${rows}`);
 });
 
+await step("Swap quote: V2 router getAmountsOut for a real Sepolia pair, read through Anon-RPC", async () => {
+  // Pair #311 of the Sepolia V2 factory (has real reserves, verified separately with a direct call).
+  await p.goto(`${BASE}/?from=0x174F4259E885EBaFcDc6c09f38a493c4CA90b85e&to=0x832262D88e6C02A31C7C267B6536cFafe7Fdf3E8`);
+  await hydrated();
+  await p.waitFor("document.querySelector('input[inputmode=decimal]')", 20000, "swap input");
+  // wait for the worker + token lookups (both are Anon-RPC reads), then type an amount
+  await p.waitFor("![...document.querySelectorAll('button')].some(b=>b.textContent.includes('Select token'))", 120000, "tokens resolved via Anon-RPC");
+  await p.type("input[inputmode=decimal]", "0.000001");
+  await p.waitFor("document.body.innerText.includes('Minimum received')", 120000, "quote");
+  const t = await text();
+  if (!/Quotes, balances and allowances are read via\s+Anon-RPC/.test(t)) throw new Error("swap card does not state Anon-RPC as read transport");
+  console.log("      " + (t.match(/Rate\n[^\n]+/)?.[0] ?? "").replace("\n", " "));
+  await nav("Privacy Center");
+  await p.waitFor("document.body.innerText.includes('Anonymised reads ✓')", 10000);
+  if (Number(await stat("Direct reads")) !== 0) throw new Error("direct reads happened during Anon-RPC quote");
+});
+
 await step("Standard mode generates DIRECT reads and the log says so", async () => {
   await p.click("Standard");
   await nav("Pools");
