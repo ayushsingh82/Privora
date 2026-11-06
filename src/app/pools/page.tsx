@@ -37,8 +37,8 @@ export default function Pools() {
       </div>
 
       <form onSubmit={(e) => { e.preventDefault(); setSubmitted({ a, b }); }} className="grid gap-2 rounded-2xl border border-line bg-card p-4 md:grid-cols-[1fr_1fr_auto]">
-        <input value={a} onChange={(e) => setA(e.target.value)} placeholder="Token address (or pair address)" className="mono rounded-xl border border-line bg-card2 px-3 py-2 text-sm outline-none focus:border-accent" />
-        <input value={b} onChange={(e) => setB(e.target.value)} placeholder="Second token (optional, defaults to WETH)" className="mono rounded-xl border border-line bg-card2 px-3 py-2 text-sm outline-none focus:border-accent" />
+        <input value={a} onChange={(e) => setA(e.target.value)} placeholder="Token address (or pair address)" className="mono rounded-xl border border-line bg-card2 px-3 py-2 text-sm outline-none focus:border-white/30" />
+        <input value={b} onChange={(e) => setB(e.target.value)} placeholder="Second token (optional, defaults to WETH)" className="mono rounded-xl border border-line bg-card2 px-3 py-2 text-sm outline-none focus:border-white/30" />
         <button disabled={!a} className="rounded-xl bg-accent px-5 py-2 text-sm font-semibold text-accent-fg disabled:opacity-50">Search</button>
       </form>
 
@@ -54,7 +54,12 @@ export default function Pools() {
 
       <div>
         <h2 className="mb-2 text-sm font-medium text-muted">Newest pairs</h2>
-        {!ready && <p className="text-sm text-muted">Waiting for the read transport…</p>}
+        {!ready && (
+          <div className="grid gap-3 md:grid-cols-2">
+            <p className="col-span-full text-sm text-muted">Waiting for the read transport...</p>
+            {[0, 1, 2, 3].map((i) => <div key={i} className="skeleton h-28" />)}
+          </div>
+        )}
         {list.isError && <p className="text-sm text-bad">{(list.error as Error).message}</p>}
         <div className="grid gap-3 md:grid-cols-2">{list.data?.pages.flatMap((p) => p.pools).map((p) => <PoolCard key={p.pair} p={p} />)}</div>
         {list.isFetching && !list.data && <div className="grid gap-3 md:grid-cols-2">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton h-44" />)}</div>}

@@ -12,11 +12,8 @@ const step = async (name: string, fn: () => Promise<void>) => {
   catch (e) { failed++; console.log(`  ✖ ${name}\n      ${e instanceof Error ? e.message : e}`); }
 };
 const text = () => p.eval<string>("document.body.innerText");
-const stat = async (label: string) => {
-  const t = await text();
-  const m = t.match(new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\n([^\\n]+)"));
-  return m?.[1] ?? "";
-};
+const STAT: Record<string, string> = { "Anonymised reads ✓": "anon-ok", "Direct reads": "direct" };
+const stat = async (label: string) => p.eval<string>(`document.querySelector('[data-stat="${STAT[label]}"]')?.textContent ?? ""`);
 const hydrated = () => p.waitFor("Object.keys(document.querySelector('a,button')).some(k=>k.startsWith('__react'))", 30000, "hydration");
 const nav = async (label: string) => { await p.click(label); };   // client-side navigation keeps the worker alive
 
@@ -25,7 +22,7 @@ await p.goto(BASE + "/privacy");
 await hydrated();
 
 await step("Anon-RPC worker boots and passes hash-pinned load (status: ready)", async () => {
-  await p.waitFor("document.body.innerText.includes('Worker\\nready')", 150000, "worker ready");
+  await p.waitFor("document.querySelector('[data-worker=\"ready\"]') !== null", 150000, "worker ready");
 });
 
 await step("Pools page loads real Uniswap V2 pairs through Anon-RPC", async () => {
@@ -35,7 +32,7 @@ await step("Pools page loads real Uniswap V2 pairs through Anon-RPC", async () =
 
 await step("Privacy Center: anonymised reads > 0, direct reads = 0, rows labelled Anon-RPC", async () => {
   await nav("Privacy Center");
-  await p.waitFor("document.body.innerText.includes('Anonymised reads ✓')", 10000);
+  await p.waitFor("document.querySelector('[data-stat=\"anon-ok\"]') !== null", 10000);
   const ok = Number(await stat("Anonymised reads ✓"));
   const direct = Number(await stat("Direct reads"));
   if (!(ok > 0)) throw new Error(`expected anonymised reads > 0, got ${ok}`);
@@ -55,40 +52,41 @@ await step("Swap quote: V2 router getAmountsOut for a real Sepolia pair, read th
   await p.type("input[inputmode=decimal]", "0.000001");
   await p.waitFor("document.body.innerText.includes('Minimum received')", 120000, "quote");
   const t = await text();
-  if (!/Quotes, balances and allowances are read via\s+Anon-RPC/.test(t)) throw new Error("swap card does not state Anon-RPC as read transport");
+  if (!/Anon-RPC\s+active, reads are anonymised/.test(t)) throw new Error("swap card does not state Anon-RPC as read transport");
   console.log("      " + (t.match(/Rate\n[^\n]+/)?.[0] ?? "").replace("\n", " "));
   await nav("Privacy Center");
-  await p.waitFor("document.body.innerText.includes('Anonymised reads ✓')", 10000);
+  await p.waitFor("document.querySelector('[data-stat=\"anon-ok\"]') !== null", 10000);
   if (Number(await stat("Direct reads")) !== 0) throw new Error("direct reads happened during Anon-RPC quote");
 });
 
 await step("Standard mode generates DIRECT reads and the log says so", async () => {
-  await p.click("Standard");
+  await nav("Privacy Center");
+  await p.click("Standard");            // mode switch lives in the Privacy Center
   await nav("Pools");
   await p.waitFor("document.body.innerText.includes('Reserve ')", 60000);
   await nav("Privacy Center");
-  await p.waitFor("document.body.innerText.includes('Anonymised reads ✓')", 10000);
-  await p.waitFor("Number((document.body.innerText.match(/Direct reads\\n(\\d+)/)||[])[1]) > 0", 30000, "direct reads counted");
+  await p.waitFor("document.querySelector('[data-stat=\"anon-ok\"]') !== null", 10000);
+  await p.waitFor("Number(document.querySelector('[data-stat=\"direct\"]')?.textContent) > 0", 30000, "direct reads counted");
   const rows = await p.eval<number>("[...document.querySelectorAll('tbody tr')].filter(r=>r.innerText.includes('Direct RPC') && r.innerText.includes('Success')).length");
   if (rows < 1) throw new Error("no Direct RPC row");
 });
 
 await step("Fail-closed: killed worker => reads fail visibly, NO direct fallback", async () => {
-  await p.click("Anon-RPC");            // header toggle back to Anon-RPC mode
+  await p.click("Anon-RPC");            // Privacy Center switch back to Anon-RPC mode
   const before = Number(await stat("Direct reads"));
   await p.click("Kill worker");
-  await p.waitFor("document.body.innerText.includes('Worker\\nfailed')", 5000);
+  await p.waitFor("document.querySelector('[data-worker=\"failed\"]') !== null", 5000);
   await nav("Pools");
   await p.waitFor("document.body.innerText.includes('Anon-RPC unavailable')", 10000, "unavailable banner");
   await nav("Privacy Center");
-  await p.waitFor("document.body.innerText.includes('Anonymised reads ✓')", 10000);
+  await p.waitFor("document.querySelector('[data-stat=\"anon-ok\"]') !== null", 10000);
   const after = Number(await stat("Direct reads"));
   if (after !== before) throw new Error(`direct reads changed ${before} -> ${after}: SILENT FALLBACK`);
 });
 
 await step("Restart worker recovers Anon-RPC", async () => {
   await p.click("Restart worker");
-  await p.waitFor("document.body.innerText.includes('Worker\\nready')", 150000, "worker ready again");
+  await p.waitFor("document.querySelector('[data-worker=\"ready\"]') !== null", 150000, "worker ready again");
 });
 
 await p.screenshot(process.env.SHOT ?? "/tmp/privora-privacy.png").catch(() => {});

@@ -2,6 +2,7 @@
 import { useAnon } from "@/lib/hooks";
 import { CHAIN } from "@/lib/ethereum/chains";
 import { getNetwork, NETWORKS } from "@/lib/anon-rpc/networks";
+import { ModeToggle } from "@/components/Header";
 import { killWorker, setReadMode, startWorker } from "@/lib/anon-rpc/manager";
 
 const LABEL = { anon: "Anon-RPC", direct: "Direct RPC", bootstrap: "Direct (bootstrap)" } as const;
@@ -26,25 +27,53 @@ export default function PrivacyCenter() {
         <p className="mt-1 text-sm text-muted">Live state of the Anon-RPC integration. Every number here is counted from real requests in this browser session.</p>
       </div>
 
+      <section className="rounded-2xl border border-line bg-card p-5">
+        <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+          <div className="flex items-center gap-3">
+            <span className={`h-3 w-3 rounded-full ${a.status === "ready" ? "bg-ok" : a.status === "failed" ? "bg-bad" : "bg-accent"}`} />
+            <div>
+              <div className="text-xs uppercase tracking-wider text-muted">Worker</div>
+              <div data-worker={a.status} className="text-lg font-semibold capitalize">{a.status}</div>
+            </div>
+          </div>
+          {[
+            ["Transport", a.mode === "anon" ? "Anon-RPC" : "Direct RPC"],
+            ["Network", net.label.split(" — ")[0]],
+            ["Read chain", `${CHAIN.name} (${CHAIN.id})`],
+            ["Integrity", a.status === "ready" ? "Hash-pinned, verified" : a.status === "failed" ? "Failed" : "Pending"],
+            ["Boot time", a.readyAt && a.startedAt ? `${((a.readyAt - a.startedAt) / 1000).toFixed(1)}s` : "-"],
+          ].map(([k, v]) => (
+            <div key={k}>
+              <div className="text-xs uppercase tracking-wider text-muted">{k}</div>
+              <div className="mt-0.5 font-medium">{v}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat k="Worker" v={a.status} tone={a.status === "ready" ? "ok" : a.status === "failed" ? "bad" : undefined} />
-        <Stat k="Active transport" v={a.mode === "anon" ? "Anon-RPC" : "Direct RPC"} />
-        <Stat k="Anon-RPC network" v={net.label.split(" — ")[0]} />
-        <Stat k="Read chain" v={`${CHAIN.name} (${CHAIN.id})`} />
-        <Stat k="Anonymised reads ✓" v={a.anonOk} tone="ok" />
-        <Stat k="Anonymised reads ✗" v={a.anonFailed} tone={a.anonFailed ? "bad" : undefined} />
-        <Stat k="Direct reads" v={a.directOk + a.directFailed} />
-        <Stat k="Last anonymised read" v={ago(a.lastAnonAt)} />
-        <Stat k="Isolation keys used" v={a.isolationKeys} />
-        <Stat k="Bootstrap reads (direct)" v={a.bootstrapOk} />
-        <Stat k="Integrity check" v={a.status === "ready" ? "hash-pinned ✓" : a.status === "failed" ? "failed" : "pending"} tone={a.status === "ready" ? "ok" : a.status === "failed" ? "bad" : undefined} />
-        <Stat k="Boot time" v={a.readyAt && a.startedAt ? `${((a.readyAt - a.startedAt) / 1000).toFixed(1)}s` : "—"} />
+        {[
+          { id: "anon-ok", k: "Anonymised reads", v: a.anonOk, c: "text-ok", n: "succeeded through Anon-RPC" },
+          { id: "anon-failed", k: "Anonymised failures", v: a.anonFailed, c: a.anonFailed ? "text-bad" : "", n: "failed visibly, never retried directly" },
+          { id: "direct", k: "Direct reads", v: a.directOk + a.directFailed, c: "", n: "Standard mode only" },
+          { id: "bootstrap", k: "Bootstrap reads", v: a.bootstrapOk, c: "", n: "one-time worker setup (direct)" },
+        ].map((c) => (
+          <div key={c.k} className="rounded-2xl border border-line bg-card p-5">
+            <div className="text-xs uppercase tracking-wider text-muted">{c.k}</div>
+            <div data-stat={c.id} className={`mono mt-2 text-4xl font-semibold ${c.c}`}>{c.v}</div>
+            <div className="mt-1 text-xs text-muted">{c.n}</div>
+          </div>
+        ))}
       </div>
+      <p className="-mt-4 text-xs text-muted">
+        Last anonymised read: {ago(a.lastAnonAt)} · Isolation keys used this session: {a.isolationKeys}
+      </p>
       {a.error && <div className="rounded-xl border border-bad/40 bg-bad/10 p-3 text-sm text-bad">{a.error}</div>}
 
       <section className="rounded-2xl border border-line bg-card p-5">
         <h2 className="font-semibold">Controls</h2>
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+          <ModeToggle />
           <select
             value={a.networkId}
             onChange={(e) => startWorker(e.target.value).catch(() => {})}

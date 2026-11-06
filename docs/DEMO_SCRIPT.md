@@ -4,7 +4,7 @@ Prereqs: `npm run dev` (or build+start), Chrome with a wallet on Sepolia (some S
 
 1. **Connect (0:00)** — Click *Connect wallet*. Header shows `Anon-RPC active` (green) once the worker is ready
    (few seconds). Point at the sentence under the swap button: reads via Anon-RPC, writes not anonymised.
-2. **Standard mode (0:20)** — Toggle *Standard*. The amber banner says reads are direct and the RPC sees your IP.
+2. **Standard mode (0:20)** — Toggle *Standard*. The warning banner says reads are direct and the RPC sees your IP.
    Open a pair via the token selector (paste token `0x174F4259E885EBaFcDc6c09f38a493c4CA90b85e`, then
    `0x832262D88e6C02A31C7C267B6536cFafe7Fdf3E8` — a live Sepolia V2 pair). Balance, reserves-based quote appear.
 3. **Privacy Center (0:50)** — Open *Privacy Center*: rows are labelled **Direct RPC**, anonymised counter is 0.

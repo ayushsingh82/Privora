@@ -11,7 +11,7 @@ Uniswap V2 with every Ethereum read routed through [Anon-RPC](https://github.com
 ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)
 ![viem](https://img.shields.io/badge/viem-2.x-1e1e1e)
-![Anon-RPC](https://img.shields.io/badge/Anon--RPC-browser--harness%200.4.0-f59e0b)
+![Anon-RPC](https://img.shields.io/badge/Anon--RPC-browser--harness%200.4.0-ff007a)
 ![Uniswap V2](https://img.shields.io/badge/Uniswap-V2%20contracts-ff007a)
 ![Tests](https://img.shields.io/badge/tests-unit%20%2B%20real--browser%20e2e-34d399)
 ![License](https://img.shields.io/badge/license-MIT-blue)
@@ -24,7 +24,7 @@ Uniswap V2 with every Ethereum read routed through [Anon-RPC](https://github.com
 
 ## Table of contents
 
-[Why Privora](#why-privora) · [What it is — and isn't](#what-it-is--and-isnt) · [How it works](#how-it-works) · [Features](#features) · [Screenshots](#screenshots) · [Quick start](#quick-start) · [Configuration](#configuration) · [Testing](#testing) · [Project structure](#project-structure) · [Security & privacy model](#security--privacy-model) · [Limitations](#limitations) · [Documentation](#documentation) · [Licence](#licence)
+[Why Privora](#why-privora) · [What it is — and isn't](#what-it-is--and-isnt) · [How it works](#how-it-works) · [Features](#features) · [Screenshots](#screenshots) · [Demo](#demo) · [Quick start](#quick-start) · [Configuration](#configuration) · [Testing](#testing) · [Project structure](#project-structure) · [Security & privacy model](#security--privacy-model) · [Limitations](#limitations) · [Documentation](#documentation) · [Licence](#licence)
 
 ## Why Privora
 
@@ -75,6 +75,7 @@ Deep dive: [docs/ANON_RPC_INTEGRATION.md](docs/ANON_RPC_INTEGRATION.md).
 | **Fee-on-transfer tokens** | Transactions are simulated first; taxed tokens automatically use the router's `SupportingFeeOnTransferTokens` variants. Doomed transactions never reach your wallet |
 | **Liquidity** | Add (new or existing pool, auto-paired amounts) · remove 25/50/75/100% · LP position and pool share · LP approval |
 | **Pools** | Newest factory pairs · search by token or pair address · live reserves, price, LP supply · deep links into Swap / Add liquidity |
+| **Landing page** | Live status strip · how it works · typical dapp vs. Privora comparison · FAQ · what Privora does not claim |
 | **Privacy Center** | Worker status · integrity status · per-transport counters · live request log (method, time, transport, success/failure, ms, error) · "Kill worker" fail-closed demo · what is / isn't anonymised |
 | **Settings** | Slippage and deadline, shared across Swap and Liquidity |
 | **Resilience** | Bounded concurrency, retries and worker self-heal for flaky mixnet exits — always back through Anon-RPC, never direct |
@@ -90,6 +91,17 @@ Deep dive: [docs/ANON_RPC_INTEGRATION.md](docs/ANON_RPC_INTEGRATION.md).
 <img src="docs/images/mobile.png" alt="Mobile layout" width="320" />
 
 </details>
+
+## Demo
+
+A 2 to 3 minute walkthrough (full script: [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)):
+
+1. **The problem (20s).** A normal dapp sends every balance and quote read from your IP to an RPC company.
+2. **Anon-RPC on (30s).** Open the app. The header shows the worker booting, then "Anon-RPC active". Reads only begin once it is ready.
+3. **Swap (40s).** Connect a wallet on Sepolia, enter an amount, and show the live quote, price impact and minimum received. Approve for the exact amount, then swap.
+4. **Privacy Center (30s).** Show the anonymised-read counter going up while **Direct reads stay at 0**, and the request log (method, transport, time, no parameters).
+5. **Fail-closed (30s).** Click **Kill worker**. Reads fail with a visible error, and the direct counter does not move. Retry or opt in to Standard.
+6. **Honest close (10s).** Transactions are still public onchain. Privora anonymises reads only.
 
 ## Quick start
 
@@ -134,6 +146,7 @@ Contract addresses are centralised in [`src/lib/ethereum/chains.ts`](src/lib/eth
 | `npm run typecheck` | Strict TypeScript |
 | `npm run build` | Production build |
 | `npm run e2e` | **Real headless Chrome, real Anon-RPC network:** worker boots and verifies · pools and a router quote are read through Anon-RPC · direct reads stay at 0 · Standard mode is labelled direct · killed worker fails closed with no fallback |
+| `npm run e2e:ui` | **Real headless Chrome:** every page renders with no console errors and no horizontal overflow at 1280px and 390px; nav, mode toggle, settings persistence and the token selector work |
 | `npm run e2e:tx` | **Real UI on a local Sepolia fork (anvil):** swap, exact-amount approve, taxed-token sell, add and remove liquidity — balances/allowances/LP verified onchain |
 
 `npm run e2e` needs a running production server (`npm run build && npm start`) and Google Chrome (override with `CHROME=/path`).
@@ -150,7 +163,7 @@ src/
     ethereum/             chains.ts · read-client.ts (viem on rpcRead) · wallet.ts (write path) · tx.ts
     uniswap/              abis.ts · pricing.ts (V2 math) · pools.ts (Multicall3-batched discovery)
     hooks.ts · tokens.ts · settings.ts
-scripts/                  e2e-anon.mts · e2e-tx.mts · lib/cdp.mts (dependency-free Chrome driver)
+scripts/                  e2e-anon.mts · e2e-ui.mts · e2e-tx.mts · lib/cdp.mts (dependency-free Chrome driver)
 docs/                     audit · Anon-RPC integration · demo script · test report · images
 ```
 

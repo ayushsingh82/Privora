@@ -49,6 +49,8 @@ await step("header nav reaches every page (client-side)", async () => {
 });
 
 await step("mode toggle: Standard shows the direct-RPC warning, Anon-RPC clears it", async () => {
+  await p.click("Privacy Center");
+  await p.waitFor("document.querySelector('[data-worker]') !== null", 10000, "privacy center");
   await p.click("Standard");
   await p.waitFor("document.body.innerText.includes('Standard RPC: reads go directly')", 5000, "direct banner");
   if (!(await p.eval<boolean>("document.body.innerText.includes('Standard RPC (direct)')"))) throw new Error("indicator does not say Standard RPC (direct)");
