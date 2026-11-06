@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { formatUnits } from "viem";
 import { useQueryClient } from "@tanstack/react-query";
 import { CHAIN } from "@/lib/ethereum/chains";
@@ -47,14 +47,29 @@ export default function LiquidityPanel() {
   const busy = tx.phase === "wallet" || tx.phase === "pending";
   const refetch = () => qc.invalidateQueries();
 
+  const last = useRef<"A" | "B">("A");
   const editA = (v: string) => {
+    last.current = "A";
     v = v.replace(/[^0-9.]/g, ""); setAmtA(v);
     if (pool && A && B) { const x = proportional(parse(v, A.decimals), pool.reserveA, pool.reserveB); setAmtB(x ? formatUnits(x, B.decimals) : ""); }
   };
   const editB = (v: string) => {
+    last.current = "B";
     v = v.replace(/[^0-9.]/g, ""); setAmtB(v);
     if (pool && A && B) { const x = proportional(parse(v, B.decimals), pool.reserveB, pool.reserveA); setAmtA(x ? formatUnits(x, A.decimals) : ""); }
   };
+
+  // On a slow mixnet the pool can arrive after the user has already typed. Fill the other side as soon as it does.
+  useEffect(() => {
+    if (!pool || !A || !B) return;
+    if (last.current === "A" && amtA && !amtB) {
+      const x = proportional(parse(amtA, A.decimals), pool.reserveA, pool.reserveB);
+      if (x) setAmtB(formatUnits(x, B.decimals));
+    } else if (last.current === "B" && amtB && !amtA) {
+      const x = proportional(parse(amtB, B.decimals), pool.reserveB, pool.reserveA);
+      if (x) setAmtA(formatUnits(x, A.decimals));
+    }
+  }, [pool, A, B, amtA, amtB]);
 
   const needA = !!A && !A.native && inA > 0n && (allowA.data ?? 0n) < inA;
   const needB = !!B && !B.native && inB > 0n && (allowB.data ?? 0n) < inB;

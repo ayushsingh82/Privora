@@ -100,8 +100,11 @@ export function setReadMode(mode: ReadMode) {
 // A cold public mixnet sometimes needs more than one try to open its first tunnels, and a worker can hang in "starting".
 // So a boot has a watchdog, is retried, and (unless the user picked a network on purpose) fails over to the next
 // ANONYMISING network. It never falls back to a direct connection: every network in the list is an anonymising one.
-const BOOT_TIMEOUT_MS = 45_000;
-const BOOT_ATTEMPTS = 2;
+const BOOT_TIMEOUT_MS = 30_000;
+const BOOT_ATTEMPTS = 3;          // on the requested network; other networks get one try each
+const RECOVERY_DELAY_MS = 20_000;  // after a full failure, try again on its own
+const RECOVERY_MAX = 12;
+let recoveries = 0;
 
 /** Networks to try, in order: the requested one first, then the other anonymising networks. */
 export function bootOrder(first: string, failover = true): string[] {
@@ -162,13 +165,15 @@ export async function startWorker(networkId: string = state.networkId, opts: { f
   let lastErr: unknown = new Error("Anon-RPC worker could not start");
   for (const id of order) {
     const net = getNetwork(id);
-    for (let attempt = 1; attempt <= BOOT_ATTEMPTS; attempt++) {
+    const tries = id === order[0] ? BOOT_ATTEMPTS : 1;
+    for (let attempt = 1; attempt <= tries; attempt++) {
       if (gen !== generation) return;
       set({ networkId: net.id, kind: net.kind, status: "starting", error: null, startedAt: t0, readyAt: null, attempt });
       try {
         await bootOnce(net, gen);
         if (gen !== generation) return; // superseded
         set({ status: "ready", readyAt: Date.now(), error: null, attempt: 0 });
+        recoveries = 0;
         return;
       } catch (e) {
         lastErr = e;
@@ -179,6 +184,12 @@ export async function startWorker(networkId: string = state.networkId, opts: { f
   }
   if (gen !== generation) return;
   set({ status: "failed", attempt: 0, error: lastErr instanceof Error ? `${lastErr.name}: ${lastErr.message}` : String(lastErr) });
+  // Public mixnets have bad minutes. Keep trying in the background so the app recovers without a click. Reads stay
+  // blocked (fail-closed) the whole time; this only ever restarts the anonymising worker, never a direct connection.
+  if (recoveries < RECOVERY_MAX) {
+    recoveries++;
+    setTimeout(() => { if (gen === generation && state.status === "failed") startWorker(networkId, opts).catch(() => { /* state shows it */ }); }, RECOVERY_DELAY_MS);
+  }
   throw lastErr;
 }
 
