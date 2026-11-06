@@ -2,10 +2,26 @@
 
 Run date: 2026-11-06 · macOS · Node 24.22 · Chrome (headless, throwaway profile) · Sepolia · Nox network.
 
-## Automated
+## Latest full run (all suites, after the Privora rename, Settings page and UI polish)
 
 | Suite | Command | Result |
 | --- | --- | --- |
+| Unit | `npm test` | **9/9 pass** |
+| Typecheck | `npm run typecheck` | clean |
+| Production build | `npm run build` | success (7 routes, static) |
+| Anon-RPC e2e (real worker, real mixnet) | `npm run e2e` | **7/7 steps pass** |
+| UI e2e (real Chrome) | `npm run e2e:ui` | **8/8 steps pass** |
+| Wallet-signed tx e2e (anvil Sepolia fork) | `npm run e2e:tx` | **4/4 steps pass** |
+
+`npm run e2e:ui` covers: every route renders with no console errors and **no horizontal overflow at 1280 px and 390 px**;
+brand (title, logo, no leftover old name); header navigation; mode toggle banner/indicator; Settings persisting across a
+full reload and reaching the swap card; the Connect-wallet button state; token selector filtering and validation.
+
+## Automated (detail)
+
+| Suite | Command | Result |
+| --- | --- | --- |
+| Unit: settings store (works without localStorage)  | `npm test` | pass |
 | Unit: V2 math (UniswapV2Library vector, impact, min-out, quote) | `npm test` | 5/5 pass |
 | Unit: fail-closed (anon mode, no worker ⇒ `PrivacyError`, **0 `fetch` calls**, failure logged as `anon`) | `npm test` | pass |
 | Unit: direct mode explicit, logged `direct`, counted separately | `npm test` | pass |
@@ -64,6 +80,6 @@ wallet-signed writes are each tested, but not in the same run against a public n
 | A real browser wallet extension (MetaMask/Rabby) | Only a stub EIP-1193 provider was used; real-extension prompts/network switching not exercised |
 | ERC-20 → ERC-20 swaps and non-ETH `addLiquidity`/`removeLiquidity` | Same code path family, but not executed in tests (ETH-pair flows were) |
 | Public-network transactions | Not run; fork only |
-| Mobile layout | Visually checked at 390–500 px screenshots only |
+| Mobile layout | Automated overflow check at 390 px on every route plus screenshots; no real-device testing |
 | Mainnet | Contract addresses verified onchain; no UI run on mainnet |
 | Anon-RPC network anonymity properties | Out of scope: we test routing/transport, not the network's guarantees |
