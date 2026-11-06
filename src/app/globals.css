@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #0b0b0c;
+  --card: #151517;
+  --card2: #1d1d20;
+  --line: #2a2a2e;
+  --fg: #f4f4f5;
+  --muted: #9a9aa2;
+  --accent: #f59e0b;
+  --accent-fg: #1a1100;
+  --ok: #34d399;
+  --bad: #f87171;
+}
+@theme inline {
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-card2: var(--card2);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-ok: var(--ok);
+  --color-bad: var(--bad);
+}
+html { color-scheme: dark; }
+body { background: var(--bg); color: var(--fg); font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+input::placeholder { color: #55555c; }
+input[type="number"]::-webkit-inner-spin-button { display: none; }
