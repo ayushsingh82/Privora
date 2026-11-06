@@ -1,112 +1,180 @@
-# PrivateSwap
+<div align="center">
 
-**Swap privately. Read anonymously.** — Uniswap V2, powered by [Anon-RPC](https://github.com/ethereum/anon-rpc).
+<img src="src/app/icon.svg" width="72" alt="Privora logo" />
 
-PrivateSwap is a Uniswap V2 interface whose Ethereum **read layer** goes through Anon-RPC. Balances, allowances,
-pool reserves, quotes, LP positions and token metadata are fetched through a hash-pinned, sandboxed anonymising
-worker, so the RPC provider no longer sees *your IP address next to your wallet's query pattern*.
+# Privora
 
-It is **not** a new AMM and does not change Uniswap V2's contracts or math. It talks to the canonical, unmodified
-Uniswap V2 factory/router (addresses verified onchain, see `src/lib/ethereum/chains.ts`).
+**Swap privately. Read anonymously.**
 
-> Anon-RPC anonymises chain **reads**. Transactions are signed and broadcast by your wallet and are public onchain.
-> PrivateSwap never claims otherwise.
+Uniswap V2 with every Ethereum read routed through [Anon-RPC](https://github.com/ethereum/anon-rpc) — so your RPC provider stops seeing your IP address next to your wallet's queries.
 
-## Why
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)
+![viem](https://img.shields.io/badge/viem-2.x-1e1e1e)
+![Anon-RPC](https://img.shields.io/badge/Anon--RPC-browser--harness%200.4.0-f59e0b)
+![Uniswap V2](https://img.shields.io/badge/Uniswap-V2%20contracts-ff007a)
+![Tests](https://img.shields.io/badge/tests-unit%20%2B%20real--browser%20e2e-34d399)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
-Every `eth_getBalance`, `allowance`, or `getReserves` call from a normal dapp is a request from your IP to an RPC
-company: *"this IP cares about this address and this pool."* That links your network identity to your wallet before
-you ever sign anything. PrivateSwap removes that link for the read path.
+<img src="docs/images/home.png" alt="Privora swap interface" width="880" />
 
-## Architecture
+</div>
 
+---
+
+## Table of contents
+
+[Why Privora](#why-privora) · [What it is — and isn't](#what-it-is--and-isnt) · [How it works](#how-it-works) · [Features](#features) · [Screenshots](#screenshots) · [Quick start](#quick-start) · [Configuration](#configuration) · [Testing](#testing) · [Project structure](#project-structure) · [Security & privacy model](#security--privacy-model) · [Limitations](#limitations) · [Documentation](#documentation) · [Licence](#licence)
+
+## Why Privora
+
+Every `eth_getBalance`, `allowance` or `getReserves` call from a normal dapp is a request from **your IP address** to an RPC company: *"this IP cares about this wallet and this pool."* That links your network identity to your wallet before you ever sign anything.
+
+Privora removes that link for the **read path**. The Uniswap V2 experience is unchanged; what changes is *how the app reads the chain*.
+
+## What it is — and isn't
+
+| Privora **is** | Privora **is not** |
+| --- | --- |
+| The real, unmodified Uniswap V2 factory / pair / router, with a new frontend | A new AMM or a changed swap formula |
+| A real integration of `@anon-rpc/browser-harness` in the read layer | A changed RPC URL, or a simulated "privacy" badge |
+| Fail-closed: no worker ⇒ reads blocked, never a silent direct fallback | A way to hide your address or transactions onchain |
+| Transparent: a live log of every request and the transport that carried it | A guarantee of anonymity (that depends on the Anon-RPC network's threat model) |
+
+> **Anon-RPC anonymises chain _reads_.** Transactions are signed and broadcast by your wallet and are public onchain. Privora never claims otherwise.
+
+## How it works
+
+```mermaid
+flowchart TD
+    UI[Privora UI · Next.js] --> MODE{Privacy mode}
+    MODE -->|Anon-RPC · default| WORKER[Anon-RPC worker<br/>hash-pinned · null-origin iframe · mixnet exit]
+    MODE -->|Standard · explicit opt-in| DIRECT[Plain fetch]
+    WORKER --> CHOKE
+    DIRECT --> CHOKE
+    CHOKE["rpcRead() — single, fail-closed choke point<br/>logs method + transport only"] --> VIEM[viem PublicClient · Multicall3 batching]
+    VIEM --> UNI[(Uniswap V2<br/>Factory · Pairs · Router)]
+
+    UI --> WALLET[Wallet · EIP-1193]
+    WALLET -->|approve · swap · add · remove| CHAIN[(Ethereum)]
+    WALLET -. "NOT anonymised" .- CHAIN
 ```
-                        PRIVATESWAP FRONTEND (Next.js)
-                                   |
-                         PRIVACY MODE (header toggle)
-                         /                          \
-                  Anon-RPC (default)            Standard RPC (opt-in)
-                        |                              |
-        browser-harness worker (hash-pinned,        plain fetch()
-        null-origin iframe, mixnet exit)                |
-                        \                              /
-                         +---- rpcRead()  <- single, fail-closed choke point; logs method + transport only
-                                   |
-                       viem PublicClient (custom transport) + Multicall3 batching
-                                   |
-                       Uniswap V2 Factory / Pairs / Router (onchain reads)
 
-   WRITES: wallet (EIP-1193, window.ethereum) -> approve / swap / add / remove -> NOT anonymised
-   RECEIPTS: polled through the read transport (follows the selected mode)
-```
+- **Reads** (balances, allowances, pairs, reserves, quotes, LP positions, token metadata, receipt polling) → `rpcRead()` → Anon-RPC worker.
+- **Writes** (approve, swap, add/remove liquidity) → your wallet's own provider. Separate module, separate transport. Never routed through the read transport.
+- **Fail-closed:** in Anon-RPC mode, if the worker isn't ready, reads throw `PrivacyError` before touching the network. The user can **Retry** or explicitly **Use Standard RPC**.
+- **Isolation:** each wallet session gets a fresh random `isolationKey` (not derived from the address), rotated on connect and account change.
 
-Key files: `src/lib/anon-rpc/manager.ts` (worker lifecycle, fail-closed transport, request log),
-`src/lib/ethereum/read-client.ts` (viem client on that transport), `src/lib/ethereum/wallet.ts` (separate write path).
+Deep dive: [docs/ANON_RPC_INTEGRATION.md](docs/ANON_RPC_INTEGRATION.md).
 
 ## Features
 
-- **Swap** — token selector with onchain address lookup/validation, router `getAmountsOut` quote (direct or via WETH),
-  price impact, minimum received, 0.3% fee, slippage, exact-amount ERC-20 approval, swap (ETH↔token, token↔token).
-- **Liquidity** — add (new or existing pool), remove (25/50/75/100%), LP position + pool share, LP approval.
-- **Pools** — newest factory pairs, search by token address(es) or pair address, live reserves, deep links.
-- **Privacy Center** — worker status, integrity status, per-transport counters, live request log (method, time,
-  transport, success/failure, duration, error), comparison, "kill worker" fail-closed demo.
-- **Fail-closed** — in Anon-RPC mode a missing/failed worker blocks reads with a visible error. Never silent fallback.
+| Area | What you get |
+| --- | --- |
+| **Swap** | Validated token selector with onchain address lookup · router quote (direct or via WETH) · price impact · minimum received · 0.3% fee · exact-amount approvals (never unlimited) · ETH↔token and token↔token swaps |
+| **Fee-on-transfer tokens** | Transactions are simulated first; taxed tokens automatically use the router's `SupportingFeeOnTransferTokens` variants. Doomed transactions never reach your wallet |
+| **Liquidity** | Add (new or existing pool, auto-paired amounts) · remove 25/50/75/100% · LP position and pool share · LP approval |
+| **Pools** | Newest factory pairs · search by token or pair address · live reserves, price, LP supply · deep links into Swap / Add liquidity |
+| **Privacy Center** | Worker status · integrity status · per-transport counters · live request log (method, time, transport, success/failure, ms, error) · "Kill worker" fail-closed demo · what is / isn't anonymised |
+| **Settings** | Slippage and deadline, shared across Swap and Liquidity |
+| **Resilience** | Bounded concurrency, retries and worker self-heal for flaky mixnet exits — always back through Anon-RPC, never direct |
 
-## Run it
+## Screenshots
+
+| Privacy Center | Pools |
+| --- | --- |
+| <img src="docs/images/privacy-center.png" alt="Privacy Center" /> | <img src="docs/images/pools.png" alt="Pool explorer" /> |
+
+<details><summary>Mobile</summary>
+
+<img src="docs/images/mobile.png" alt="Mobile layout" width="320" />
+
+</details>
+
+## Quick start
+
+**Prerequisites:** Node.js 20+ (developed on 24), a browser wallet (MetaMask / Rabby) for transactions. Reads work without one.
 
 ```bash
-cd privateswap
+git clone https://github.com/ayushsingh82/ethglobalmumbai.git
+cd ethglobalmumbai
 npm install
-cp .env.example .env.local     # optional; defaults work
+cp .env.example .env.local     # optional — defaults work
 npm run dev                    # http://localhost:3200
 ```
 
 Production: `npm run build && npm start`.
 
-Needs a browser wallet (MetaMask/Rabby) on **Sepolia** for transactions (default chain; set
-`NEXT_PUBLIC_CHAIN_ID=1` for mainnet). Reads work without a wallet.
+For transactions, switch your wallet to **Sepolia** (default chain) and get test ETH from any Sepolia faucet. For mainnet set `NEXT_PUBLIC_CHAIN_ID=1`.
 
-## Environment
+## Configuration
 
-All variables are public config; **no secrets are needed**. See `.env.example`.
+All variables are public config — **no secrets are required**.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `NEXT_PUBLIC_CHAIN_ID` | `11155111` | `11155111` (Sepolia) or `1` (mainnet) |
-| `NEXT_PUBLIC_RPC_URL_SEPOLIA` / `_MAINNET` | publicnode | RPC used directly in Standard mode and by the exit node in Anon-RPC mode |
-| `NEXT_PUBLIC_ANON_RPC_NETWORK` | `nox` | `nox`, `tor-js`, `nym` |
+| `NEXT_PUBLIC_CHAIN_ID` | `11155111` | `11155111` (Sepolia) or `1` (Ethereum mainnet) |
+| `NEXT_PUBLIC_RPC_URL_SEPOLIA` | publicnode | RPC used directly in Standard mode and by the exit node in Anon-RPC mode |
+| `NEXT_PUBLIC_RPC_URL_MAINNET` | publicnode | Same, for mainnet |
+| `NEXT_PUBLIC_ANON_RPC_NETWORK` | `nox` | `nox`, `tor-js` or `nym` (the non-anonymising `passthrough` is blocked in Anon-RPC mode) |
 
-## Tests
+Contract addresses are centralised in [`src/lib/ethereum/chains.ts`](src/lib/ethereum/chains.ts) and were verified onchain (router → `factory()` / `WETH()`).
 
-```bash
-npm test          # unit: V2 math vectors + fail-closed/transport tests (no network)
-npm run typecheck
-npm run build && npm start   # in one shell, then:
-npm run e2e       # real headless Chrome: worker boot, anonymised quote, direct mode, fail-closed
-npm run e2e:tx    # real UI on a local anvil Sepolia fork: swap, approve, add & remove liquidity (see script header)
+| | Sepolia | Mainnet |
+| --- | --- | --- |
+| Factory | `0xF62c03E08ada871A0bEb309762E260a7a6a880E6` | `0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f` |
+| Router02 | `0xeE567Fe1712Faf6149d80dA1E6934E354124CfE3` | `0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D` |
+| WETH | `0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14` | `0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2` |
+
+## Testing
+
+| Command | What it proves |
+| --- | --- |
+| `npm test` | Unit tests: V2 math vs. `UniswapV2Library` vectors, settings, fail-closed transport (**zero** `fetch` calls when the worker is down), log never stores parameters |
+| `npm run typecheck` | Strict TypeScript |
+| `npm run build` | Production build |
+| `npm run e2e` | **Real headless Chrome, real Anon-RPC network:** worker boots and verifies · pools and a router quote are read through Anon-RPC · direct reads stay at 0 · Standard mode is labelled direct · killed worker fails closed with no fallback |
+| `npm run e2e:tx` | **Real UI on a local Sepolia fork (anvil):** swap, exact-amount approve, taxed-token sell, add and remove liquidity — balances/allowances/LP verified onchain |
+
+`npm run e2e` needs a running production server (`npm run build && npm start`) and Google Chrome (override with `CHROME=/path`).
+`npm run e2e:tx` setup is documented in the script header. Full results and honest caveats: [docs/TEST_REPORT.md](docs/TEST_REPORT.md).
+
+## Project structure
+
+```
+src/
+  app/                    Next.js routes: / (swap) · /liquidity · /pools · /privacy · /settings
+  components/             Header, PrivacyBanner, TokenSelect, swap/, liquidity/, PoolCard, TxStatus …
+  lib/
+    anon-rpc/             manager.ts (worker lifecycle · rpcRead choke point · request log) · networks.ts
+    ethereum/             chains.ts · read-client.ts (viem on rpcRead) · wallet.ts (write path) · tx.ts
+    uniswap/              abis.ts · pricing.ts (V2 math) · pools.ts (Multicall3-batched discovery)
+    hooks.ts · tokens.ts · settings.ts
+scripts/                  e2e-anon.mts · e2e-tx.mts · lib/cdp.mts (dependency-free Chrome driver)
+docs/                     audit · Anon-RPC integration · demo script · test report · images
 ```
 
-`npm run e2e` needs Google Chrome (override with `CHROME=/path`). Results: [docs/TEST_REPORT.md](docs/TEST_REPORT.md).
+## Security & privacy model
 
-## Docs
+- **No secrets.** Nothing sensitive is read or stored; all env vars are public config. No private keys in the repo (the e2e script uses anvil's public default dev account on a local fork only).
+- **Approvals are exact-amount**, never unlimited.
+- **Simulate before send:** swaps and removals are `eth_call`-simulated first, so reverts never cost gas.
+- **Token metadata is untrusted:** read from the contract, sanitised, and non-ERC-20 addresses are rejected. Always verify the address, not the symbol.
+- **The log is safe by construction:** `{id, ts, method, transport, ok, ms, error}` only — no params, addresses, URLs or keys (unit-tested).
+- **What Anon-RPC does not protect:** your onchain address and transactions, your wallet extension's own RPC traffic, timing/behavioural correlation, a compromised exit, and the page host seeing your IP when you load the app.
 
-[Project audit](docs/PROJECT_AUDIT.md) · [Anon-RPC integration](docs/ANON_RPC_INTEGRATION.md) ·
-[Demo script](docs/DEMO_SCRIPT.md) · [Test report](docs/TEST_REPORT.md)
+## Limitations
 
-## Limitations (honest list)
-
-- Anon-RPC public networks are experimental: latency is seconds per request and exits can be unavailable
-  (e.g. Nox exits that offer TLS tunnels are few; the app retries and self-heals but can still fail visibly).
-- Writes (approve/swap/add/remove) and the wallet's own RPC are **not** anonymised.
-- The worker bootstrap (one read of the network's specifier contract) is a direct, non-anonymised request, and the
-  page/JS load itself reveals your IP to the host. Both are shown in the Privacy Center.
-- Wallet-signed flows are tested on a local Sepolia fork with a stub wallet, not with a real extension or a public
-  network (see test report). ERC-20↔ERC-20 swaps are implemented but not covered by the tx e2e.
-- Token symbols/names are read from the contract and sanitised but are still user-controlled strings: verify addresses.
+- Public Anon-RPC networks are experimental: seconds of latency per request, and exits can be unavailable (Nox has few TLS-capable exits). Privora retries and self-heals but can still fail — visibly, with Retry.
+- Writes and the wallet's own RPC are **not** anonymised; the one-time worker bootstrap read and the page load are direct. Both are shown in the Privacy Center.
+- Wallet-signed flows are tested on a local Sepolia fork with a stub wallet — not with a real wallet extension or a public network. ERC-20↔ERC-20 swaps are implemented but not covered by the tx e2e.
+- Multi-hop routing is limited to direct and via-WETH.
 - Sepolia Uniswap V2 pools are test pools with arbitrary liquidity.
 
-## Licence / attribution
+## Documentation
 
-MIT. Written from scratch against the published Uniswap V2 contract interfaces; no Uniswap interface (GPL-3.0) source
-is copied. "Uniswap" is a trademark of its owners; this is an unaffiliated hackathon project.
+[Project audit](docs/PROJECT_AUDIT.md) · [Anon-RPC integration](docs/ANON_RPC_INTEGRATION.md) · [Demo script (2–3 min)](docs/DEMO_SCRIPT.md) · [Test report](docs/TEST_REPORT.md)
+
+## Licence
+
+MIT. Written from scratch against the published Uniswap V2 contract interfaces; no Uniswap interface (GPL-3.0) source is copied. "Uniswap" is a trademark of its owners — Privora is an unaffiliated project built for ETHGlobal Mumbai.
