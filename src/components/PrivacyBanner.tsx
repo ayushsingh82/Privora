@@ -14,7 +14,7 @@ export default function PrivacyBanner() {
       {a.mode === "anon" && a.status === "failed" && (
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-bad/40 bg-bad/10 px-4 py-3 text-sm">
           <span className="font-medium text-bad">Anon-RPC unavailable — reads are blocked.</span>
-          <span className="text-muted">{a.error}. PrivateSwap will not fall back to direct RPC on its own.</span>
+          <span className="text-muted">{a.error}. Privora will not fall back to direct RPC on its own.</span>
           <span className="ml-auto flex gap-2">
             <button onClick={() => startWorker().catch(() => {})} className="rounded-lg border border-line px-3 py-1 hover:border-accent">Retry</button>
             <button onClick={() => setReadMode("direct")} className="rounded-lg border border-line px-3 py-1 hover:border-accent">Use Standard RPC</button>
@@ -33,7 +33,7 @@ export default function PrivacyBanner() {
       )}
       {wrongChain && (
         <div className="flex items-center gap-3 rounded-xl border border-line bg-card px-4 py-2 text-sm">
-          Wallet is on a different network. PrivateSwap uses {CHAIN.name}.
+          Wallet is on a different network. Privora uses {CHAIN.name}.
           <button onClick={switchToAppChain} className="ml-auto rounded-lg bg-accent px-3 py-1 font-medium text-accent-fg">Switch</button>
         </div>
       )}

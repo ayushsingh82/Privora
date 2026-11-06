@@ -3,13 +3,13 @@
 ## Starting point
 
 The repository this folder lives in (ROUTIQ) contains **no Uniswap V2 frontend**; there was nothing to fork. The
-Uniswap-compatible interface was therefore written from scratch in `privateswap/` against the unmodified, published
+Uniswap-compatible interface was therefore written from scratch in the project folder against the unmodified, published
 Uniswap V2 contract interfaces (Factory, Pair, Router02, ERC-20). No Uniswap interface source (GPL-3.0) is copied, so
 there is no licence obligation beyond our own MIT licence; "Uniswap" is only used descriptively.
 
 From the parent repo we reused (and re-verified) only the **Anon-RPC network list and worker-lifecycle pattern**
 (`adopters.json5` addresses, bootstrap-read pattern, fail-closed approach) and a dependency-free Chrome DevTools driver
-for e2e tests. `privateswap/` has no imports from the parent and is its own git repo.
+for e2e tests. the project folder has no imports from the parent and is its own git repo.
 
 ## Architecture
 

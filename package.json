@@ -1,8 +1,8 @@
 {
-  "name": "privateswap",
+  "name": "privora",
   "version": "0.1.0",
   "private": true,
-  "description": "PrivateSwap — Uniswap V2, powered by Anon-RPC. Swap privately. Read anonymously.",
+  "description": "Privora — Uniswap V2, powered by Anon-RPC. Swap privately. Read anonymously.",
   "license": "MIT",
   "scripts": {
     "dev": "next dev -p 3200",

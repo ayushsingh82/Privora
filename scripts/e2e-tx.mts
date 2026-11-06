@@ -45,7 +45,7 @@ const confirmed = async (label: string) => {
 const erc20 = async (token: string, selector: string, arg: string) => BigInt(await rpc("eth_call", [{ to: token, data: selector + arg.toLowerCase().replace("0x", "").padStart(64, "0") }, "latest"]));
 const balanceOf = (token: string, who: string) => erc20(token, "0x70a08231", who);
 
-console.log(`PrivateSwap tx e2e → ${BASE}  (fork ${ANVIL})`);
+console.log(`Privora tx e2e → ${BASE}  (fork ${ANVIL})`);
 let tokenBefore = 0n, tokenAfter = 0n;
 
 await step("Swap ETH → token (swapExactETHForTokens) via the real UI", async () => {

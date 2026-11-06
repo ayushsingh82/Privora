@@ -5,7 +5,7 @@ import Header from "@/components/Header";
 import PrivacyBanner from "@/components/PrivacyBanner";
 
 export const metadata: Metadata = {
-  title: "PrivateSwap — Uniswap V2, powered by Anon-RPC",
+  title: "Privora — Private Uniswap V2 swaps, powered by Anon-RPC",
   description: "Swap privately. Read anonymously. Uniswap V2 with chain reads routed through Anon-RPC.",
 };
 

@@ -20,7 +20,7 @@ const stat = async (label: string) => {
 const hydrated = () => p.waitFor("Object.keys(document.querySelector('a,button')).some(k=>k.startsWith('__react'))", 30000, "hydration");
 const nav = async (label: string) => { await p.click(label); };   // client-side navigation keeps the worker alive
 
-console.log(`PrivateSwap e2e → ${BASE}`);
+console.log(`Privora e2e → ${BASE}`);
 await p.goto(BASE + "/privacy");
 await hydrated();
 
@@ -91,7 +91,7 @@ await step("Restart worker recovers Anon-RPC", async () => {
   await p.waitFor("document.body.innerText.includes('Worker\\nready')", 150000, "worker ready again");
 });
 
-await p.screenshot(process.env.SHOT ?? "/tmp/privateswap-privacy.png").catch(() => {});
+await p.screenshot(process.env.SHOT ?? "/tmp/privora-privacy.png").catch(() => {});
 const errs = p.errors.filter((e) => !/favicon|ERR_BLOCKED|Failed to load resource/.test(e));
 if (errs.length) console.log("  console errors:", errs.slice(0, 5));
 await p.close();

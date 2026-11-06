@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useAnon, useWallet } from "@/lib/hooks";
 import { setReadMode } from "@/lib/anon-rpc/manager";
 import { connect, disconnect } from "@/lib/ethereum/wallet";
+import Logo from "./Logo";
 
 const NAV = [
   { href: "/", label: "Swap" },
@@ -51,8 +52,8 @@ export default function Header() {
     <header className="border-b border-line">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
         <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-          <span className="grid h-7 w-7 place-items-center rounded-lg bg-accent text-accent-fg">P</span>
-          PrivateSwap
+          <Logo />
+          Privora
         </Link>
         <nav className="order-last flex w-full gap-1 overflow-x-auto text-sm md:order-none md:w-auto">
           {NAV.map((n) => (
