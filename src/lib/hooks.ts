@@ -80,13 +80,13 @@ export function useQuote(from: Token | null, to: Token | null, amountIn: bigint)
       const a = wrapped(from!), b = wrapped(to!);
       const paths: Address[][] = [[a, b]];
       if (a !== CHAIN.weth && b !== CHAIN.weth) paths.push([a, CHAIN.weth, b]);
-      const results = await Promise.all(
-        paths.map((path) =>
-          readClient.readContract({ address: CHAIN.router, abi: routerAbi, functionName: "getAmountsOut", args: [amountIn, path] })
-            .then((amounts) => ({ path, out: amounts[amounts.length - 1] }))
-            .catch(() => null),
-        ),
-      );
+      // Both candidate routes in ONE request (Multicall3), quoted by the router's own getAmountsOut.
+      const r = await readClient.multicall({
+        multicallAddress: "0xcA11bde05977b3631167028862bE2a173976CA11",
+        allowFailure: true,
+        contracts: paths.map((path) => ({ address: CHAIN.router, abi: routerAbi, functionName: "getAmountsOut", args: [amountIn, path] }) as const),
+      });
+      const results = r.map((x, i) => (x.status === "success" ? { path: paths[i], out: (x.result as readonly bigint[])[(x.result as readonly bigint[]).length - 1] } : null));
       const best = results.filter((r): r is { path: Address[]; out: bigint } => !!r && r.out > 0n).sort((x, y) => (x.out > y.out ? -1 : 1))[0];
       if (!best) throw new Error("No route: no Uniswap V2 pool (or no liquidity) for this pair");
       return best;

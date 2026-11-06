@@ -31,15 +31,20 @@ const clean = (s: string) => s.replace(/[^\x20-\x7E]/g, "").slice(0, 16) || "?";
 export async function lookupToken(input: string): Promise<Token> {
   if (!isAddress(input)) throw new Error("Not a valid address");
   const address = getAddress(input);
-  const code = await readClient.getCode({ address });
-  if (!code || code === "0x") throw new Error("No contract at this address on " + CHAIN.name);
-  const [symbol, name, decimals] = await Promise.all([
-    readClient.readContract({ address, abi: erc20Abi, functionName: "symbol" }),
-    readClient.readContract({ address, abi: erc20Abi, functionName: "name" }),
-    readClient.readContract({ address, abi: erc20Abi, functionName: "decimals" }),
-  ]).catch(() => {
-    throw new Error("Contract is not a standard ERC-20");
-  });
+  // One batched request (Multicall3): symbol, name, decimals. Anything that is not an ERC-20 fails to decode.
+  const [symbol, name, decimals] = await readClient
+    .multicall({
+      multicallAddress: "0xcA11bde05977b3631167028862bE2a173976CA11",
+      allowFailure: false,
+      contracts: [
+        { address, abi: erc20Abi, functionName: "symbol" },
+        { address, abi: erc20Abi, functionName: "name" },
+        { address, abi: erc20Abi, functionName: "decimals" },
+      ],
+    })
+    .catch(() => {
+      throw new Error("Not a standard ERC-20 contract on " + CHAIN.name);
+    });
   if (decimals > 36) throw new Error("Unreasonable decimals");
   return { address, symbol: clean(symbol), name: clean(name), decimals };
 }
