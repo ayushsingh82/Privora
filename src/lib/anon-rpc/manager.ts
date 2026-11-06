@@ -172,6 +172,14 @@ async function slot<T>(fn: () => Promise<T>): Promise<T> {
     waiting.shift()?.();
   }
 }
+let lastHeal = 0;
+/** If the current session landed on a mixnet with no TLS-capable exit, re-learn the exit set by restarting the
+ *  worker (cooldown-guarded). The retry still goes through Anon-RPC — this is never a direct fallback. */
+function healWorker() {
+  if (Date.now() - lastHeal < 30_000) return;
+  lastHeal = Date.now();
+  startWorker().catch(() => { /* surfaced via state.error */ });
+}
 const TRANSIENT = /NoTunnelExit|TunnelOpenTimeout|timed out|timeout|Tunnel|Circuit/i;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -214,6 +222,7 @@ export async function rpcRead(url: string, method: string, params: unknown[], is
             } as RequestInit);
           } catch (e) {
             lastErr = e;
+            if (attempt === 2 && /NoTunnelExit/.test(msg(e))) healWorker();
             if (attempt === ANON_ATTEMPTS || !TRANSIENT.test(msg(e))) break;
             await sleep(1500 * attempt);
           }
