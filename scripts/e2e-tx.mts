@@ -25,7 +25,7 @@ const rpc = async (method: string, params: unknown[] = []) => (await (await fetc
 async function load(path: string) {
   await p.goto(BASE + path);
   await p.waitFor("Object.keys(document.querySelector('a,button')).some(k=>k.startsWith('__react'))", 30000, "hydration");
-  await p.click("Privacy Center");                              // the mode switch lives in the Privacy Center
+  await p.click("Privacy");                              // the mode switch lives in the Privacy Center
   await p.waitFor("document.querySelector('[data-worker]') !== null", 10000, "privacy center");
   await p.click("Standard");                                   // direct reads from the local fork
   await p.eval(`window.next.router.push(${JSON.stringify(path)}); true`);   // client-side, keeps the mode
@@ -53,7 +53,7 @@ console.log(`Privora tx e2e → ${BASE}  (fork ${ANVIL})`);
 let tokenBefore = 0n, tokenAfter = 0n;
 
 await step("Swap ETH for token (swapExactETHForTokens) via the real UI", async () => {
-  await load(`/?from=${ZERO}&to=${TOKEN}`);
+  await load(`/swap?from=${ZERO}&to=${TOKEN}`);
   tokenBefore = await balanceOf(TOKEN, ME);
   await p.waitFor("![...document.querySelectorAll('button')].some(b=>b.textContent.includes('Select token'))", 30000, "tokens resolved");
   await p.type("input[inputmode=decimal]", "0.0005");

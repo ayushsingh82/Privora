@@ -67,6 +67,88 @@ flowchart TD
 
 Deep dive: [docs/ANON_RPC_INTEGRATION.md](docs/ANON_RPC_INTEGRATION.md).
 
+### Where do pools and quotes come from?
+
+There is no price API, subgraph or aggregator. Everything is read from the Uniswap V2 contracts onchain, through Anon-RPC:
+
+| What you see | Where it comes from |
+| --- | --- |
+| Quote and minimum received | `Router02.getAmountsOut(amountIn, path)`: direct pair first, or via WETH |
+| Pool reserves, price, LP supply | `Pair.getReserves()` / `totalSupply()` for the pair from `Factory.getPair()` |
+| Pool list on the Pools page | `Factory.allPairs(i)` for the newest pairs, batched with Multicall3 |
+| Balances and allowances | ERC-20 `balanceOf` / `allowance` (and `eth_getBalance` for ETH) |
+| Token symbol, name, decimals | Read from the token contract, then sanitised |
+
+The default network is **Sepolia**, so the pools are Uniswap V2 test pools with arbitrary liquidity. Mainnet is one environment variable away.
+
+### How we built the Anon-RPC integration
+
+Everything that reads the chain goes through one function, `rpcRead()`. It is the only place that can reach the network, so privacy is enforced in a single spot.
+
+```mermaid
+flowchart LR
+    subgraph APP["Privora app (browser)"]
+        HOOKS["React hooks<br/>balances · allowances · quotes · pools"]
+        VIEM["viem PublicClient<br/>custom transport + Multicall3 batching"]
+        CHOKE["rpcRead()<br/>single choke point"]
+        LOG[("Request log<br/>method · transport · result · ms<br/>no params")]
+    end
+
+    subgraph ANON["Anon-RPC (@anon-rpc/browser-harness 0.4.0)"]
+        WORKER["AnonRpcWorker<br/>hash-pinned code · null-origin iframe"]
+        NET["Mixnet<br/>nox · tor-js · nym"]
+    end
+
+    HOOKS --> VIEM --> CHOKE
+    CHOKE -->|"Anon-RPC mode: worker.fetch() + isolationKey"| WORKER --> NET --> RPC[("Sepolia / Mainnet RPC<br/>sees the exit, not your IP")]
+    CHOKE -->|"Standard mode: explicit opt-in only"| DIRECT["Plain fetch"] --> RPC
+    CHOKE -.->|"worker not ready: throw PrivacyError<br/>NO fallback"| FAIL["Visible error<br/>Retry or Use Standard"]
+    CHOKE --> LOG
+```
+
+What happens on a read, step by step:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant UI as React hook
+    participant R as rpcRead()
+    participant W as Anon-RPC worker
+    participant X as Mixnet exit
+    participant N as Ethereum RPC
+
+    Note over R,W: App start: startWorker() boots and verifies the worker (hash-pinned)
+    UI->>R: eth_call (via viem + Multicall3)
+    alt Anon-RPC mode and worker ready
+        R->>W: fetch(rpcUrl, body, isolationKey)
+        W->>X: encrypted packets through the mixnet
+        X->>N: JSON-RPC request from the exit node
+        N-->>X: result
+        X-->>W: result
+        W-->>R: result
+        R-->>UI: data (logged as "anon")
+    else Anon-RPC mode and worker not ready
+        R-->>UI: PrivacyError (nothing is sent, logged as failure)
+    else Standard mode (user opted in)
+        R->>N: direct fetch (logged as "direct")
+        N-->>R: result
+        R-->>UI: data
+    end
+    Note over R: Transient exit errors are retried up to 3 times, still through Anon-RPC, never direct
+```
+
+| Piece | File | Job |
+| --- | --- | --- |
+| Worker lifecycle and `rpcRead()` | `src/lib/anon-rpc/manager.ts` | Boot, verify, retry, self-heal; fail closed; request log |
+| Network list | `src/lib/anon-rpc/networks.ts` | `nox` (default), `tor-js`, `nym`; blocks the non-anonymising `passthrough` worker |
+| Read client | `src/lib/ethereum/read-client.ts` | viem client whose transport is `rpcRead()`; per-session isolation keys |
+| Write path | `src/lib/ethereum/wallet.ts` | Wallet signing, a separate transport that is never routed through `rpcRead()` |
+| Privacy Center | `src/app/privacy/page.tsx` | Live worker status, counters and request log |
+
+Design rules we held to: no silent direct fallback, separate read and write transports, a fresh random isolation key per wallet session, and a log that cannot contain parameters, addresses or keys.
+
+
+
 ## Features
 
 | Area | What you get |
@@ -75,20 +157,28 @@ Deep dive: [docs/ANON_RPC_INTEGRATION.md](docs/ANON_RPC_INTEGRATION.md).
 | **Fee-on-transfer tokens** | Transactions are simulated first; taxed tokens automatically use the router's `SupportingFeeOnTransferTokens` variants. Doomed transactions never reach your wallet |
 | **Liquidity** | Add (new or existing pool, auto-paired amounts) · remove 25/50/75/100% · LP position and pool share · LP approval |
 | **Pools** | Newest factory pairs · search by token or pair address · live reserves, price, LP supply · deep links into Swap / Add liquidity |
-| **Landing page** | Live status strip · how it works · typical dapp vs. Privora comparison · FAQ · what Privora does not claim |
+| **Landing page** | Live status strip · how it works · request-path diagram · typical dapp vs. Privora comparison · FAQ |
 | **Privacy Center** | Worker status · integrity status · per-transport counters · live request log (method, time, transport, success/failure, ms, error) · "Kill worker" fail-closed demo · what is / isn't anonymised |
 | **Settings** | Slippage and deadline, shared across Swap and Liquidity |
 | **Resilience** | Bounded concurrency, retries and worker self-heal for flaky mixnet exits — always back through Anon-RPC, never direct |
 
 ## Screenshots
 
-| Privacy Center | Pools |
+| Landing page | Swap with a live quote |
 | --- | --- |
-| <img src="docs/images/privacy-center.png" alt="Privacy Center" /> | <img src="docs/images/pools.png" alt="Pool explorer" /> |
+| <img src="docs/images/home.png" alt="Privora landing page" /> | <img src="docs/images/swap-quote.png" alt="Dashboard with sidebar and a live Uniswap V2 quote" /> |
+
+| Privacy Center (live data) | Pools |
+| --- | --- |
+| <img src="docs/images/privacy-center.png" alt="Privacy Center with live read path, counters, latency and request log" /> | <img src="docs/images/pools.png" alt="Pool explorer with token icons, prices and reserves" /> |
+
+| How a request travels | Liquidity | Settings |
+| --- | --- | --- |
+| <img src="docs/images/flow.png" alt="Read path through Anon-RPC and write path through the wallet" /> | <img src="docs/images/liquidity.png" alt="Add and remove liquidity" /> | <img src="docs/images/settings.png" alt="Slippage and deadline settings" /> |
 
 <details><summary>Mobile</summary>
 
-<img src="docs/images/mobile.png" alt="Mobile layout" width="320" />
+<img src="docs/images/mobile.png" alt="Landing page on mobile" width="260" /> <img src="docs/images/mobile-app.png" alt="Dashboard on mobile with a bottom tab bar" width="260" />
 
 </details>
 
@@ -146,8 +236,10 @@ Contract addresses are centralised in [`src/lib/ethereum/chains.ts`](src/lib/eth
 | `npm run typecheck` | Strict TypeScript |
 | `npm run build` | Production build |
 | `npm run e2e` | **Real headless Chrome, real Anon-RPC network:** worker boots and verifies · pools and a router quote are read through Anon-RPC · direct reads stay at 0 · Standard mode is labelled direct · killed worker fails closed with no fallback |
-| `npm run e2e:ui` | **Real headless Chrome:** every page renders with no console errors and no horizontal overflow at 1280px and 390px; nav, mode toggle, settings persistence and the token selector work |
+| `npm run e2e:ui` | **Real headless Chrome:** the landing page and every dashboard page render with no console errors and no horizontal overflow at 1280px and 390px; Launch App, sidebar, mode toggle, settings persistence and the token selector work |
 | `npm run e2e:tx` | **Real UI on a local Sepolia fork (anvil):** swap, exact-amount approve, taxed-token sell, add and remove liquidity — balances/allowances/LP verified onchain |
+| `npm run e2e:sepolia` | **Real Sepolia, real transactions:** the app in Anon-RPC mode while a throwaway test wallet swaps, approves and sells; the Privacy Center must show direct reads = 0 (needs `PRIVORA_TEST_WALLET`, see the script header) |
+| `npm run shots` | Regenerates the README screenshots from the running build |
 
 `npm run e2e` needs a running production server (`npm run build && npm start`) and Google Chrome (override with `CHROME=/path`).
 `npm run e2e:tx` setup is documented in the script header. Full results and honest caveats: [docs/TEST_REPORT.md](docs/TEST_REPORT.md).
@@ -156,8 +248,9 @@ Contract addresses are centralised in [`src/lib/ethereum/chains.ts`](src/lib/eth
 
 ```
 src/
-  app/                    Next.js routes: / (swap) · /liquidity · /pools · /privacy · /settings
-  components/             Header, PrivacyBanner, TokenSelect, swap/, liquidity/, PoolCard, TxStatus …
+  app/(marketing)/        Landing page at /
+  app/(app)/              Dashboard (sidebar): /swap · /liquidity · /pools · /privacy · /settings
+  components/             AppShell (sidebar), MarketingNav, WalletButton, TokenIcon, TokenSelect, PoolCard, swap/, liquidity/ …
   lib/
     anon-rpc/             manager.ts (worker lifecycle · rpcRead choke point · request log) · networks.ts
     ethereum/             chains.ts · read-client.ts (viem on rpcRead) · wallet.ts (write path) · tx.ts

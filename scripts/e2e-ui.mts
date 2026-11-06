@@ -4,7 +4,7 @@
 import { launch } from "./lib/cdp.mts";
 
 const BASE = process.env.BASE ?? "http://127.0.0.1:3200";
-const ROUTES = ["/", "/liquidity", "/pools", "/privacy", "/settings"];
+const ROUTES = ["/", "/swap", "/liquidity", "/pools", "/privacy", "/settings"];
 let failed = 0;
 const step = async (name: string, fn: () => Promise<void>) => {
   try { await fn(); console.log(`  ✔ ${name}`); } catch (e) { failed++; console.log(`  ✖ ${name}\n      ${e instanceof Error ? e.message : e}`); }
@@ -31,25 +31,34 @@ for (const [label, w] of [["desktop 1280px", 1280], ["phone 390px", 390]] as con
 }
 
 const p = await launch({ width: 1280, height: 900 });
-await p.goto(BASE + "/");
+await p.goto(BASE + "/swap");
 await hydrated(p);
 
-await step("brand: title, logo and header say Privora", async () => {
+await step("landing page has a Launch App button that opens the dashboard", async () => {
+  const q = await launch({ width: 1280, height: 900 });
+  await q.goto(BASE + "/");
+  await hydrated(q);
+  await q.click("Launch App");
+  await q.waitFor("document.body.innerText.includes('You pay')", 15000, "swap page");
+  await q.close();
+});
+
+await step("brand: title, logo and sidebar say Privora", async () => {
   const t = await p.eval<string>("document.title");
   if (!t.startsWith("Privora")) throw new Error(`title was "${t}"`);
-  if (!(await p.eval<boolean>("document.querySelector('header svg') !== null && document.querySelector('header').innerText.includes('Privora')"))) throw new Error("header brand missing");
+  if (!(await p.eval<boolean>("document.querySelector('aside svg') !== null && document.querySelector('aside').innerText.includes('Privora')"))) throw new Error("header brand missing");
   if (await p.eval<boolean>("document.body.innerText.includes('PrivateSwap')")) throw new Error("old name still visible");
 });
 
-await step("header nav reaches every page (client-side)", async () => {
-  for (const [label, heading] of [["Liquidity", "Add liquidity"], ["Pools", "Pools"], ["Privacy Center", "Privacy Center"], ["Settings", "Slippage tolerance"], ["Swap", "You pay"]] as const) {
+await step("sidebar reaches every page (client-side)", async () => {
+  for (const [label, heading] of [["Liquidity", "Add liquidity"], ["Pools", "Pools"], ["Privacy", "Privacy Center"], ["Settings", "Slippage tolerance"], ["Swap", "You pay"]] as const) {
     await p.click(label);
     await p.waitFor(`document.body.innerText.includes(${JSON.stringify(heading)})`, 10000, `${label} → "${heading}"`);
   }
 });
 
 await step("mode toggle: Standard shows the direct-RPC warning, Anon-RPC clears it", async () => {
-  await p.click("Privacy Center");
+  await p.click("Privacy");
   await p.waitFor("document.querySelector('[data-worker]') !== null", 10000, "privacy center");
   await p.click("Standard");
   await p.waitFor("document.body.innerText.includes('Standard RPC: reads go directly')", 5000, "direct banner");
@@ -62,7 +71,7 @@ await step("Settings persist (localStorage) and flow into the swap card", async 
   await p.click("Settings");
   await p.waitFor("document.body.innerText.includes('Slippage tolerance')", 10000);
   await p.eval("[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='1%').click()");   // exact match ("0.1%" and "10%" also contain "1%")
-  await p.goto(BASE + "/");                 // full reload: must be restored from storage
+  await p.goto(BASE + "/swap");             // full reload: must be restored from storage
   await hydrated(p);
   await p.waitFor("document.querySelector('select') && document.querySelector('select').value === '100'", 10000, "slippage select = 1% after reload");
 });

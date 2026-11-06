@@ -17,7 +17,8 @@ const w = JSON.parse(readFileSync(keyFile, "utf8"))[0];
 const account = privateKeyToAccount((w.private_key ?? w.privateKey) as `0x${string}`);
 const ME = account.address;
 const wallet = createWalletClient({ account, chain: sepolia, transport: http(RPC) });
-const TOKEN = "0x795BfFd201876c31805350Ea4A61A8E28c70685c";
+const TOKEN = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";   // Sepolia USDC (6 decimals), live V2 pool against WETH
+const DEC = 6, SELL = "20";
 const ZERO = "0x0000000000000000000000000000000000000000";
 const hashes: string[] = [];
 
@@ -80,7 +81,7 @@ console.log(`Privora REAL Sepolia e2e → ${BASE}  wallet ${ME}`);
 let tokenBefore = 0n, tokenAfter = 0n;
 
 await step("Swap ETH for token on real Sepolia, reads through Anon-RPC", async () => {
-  await load(`/?from=${ZERO}&to=${TOKEN}`);
+  await load(`/swap?from=${ZERO}&to=${TOKEN}`);
   tokenBefore = await balanceOf(TOKEN, ME);
   await p.waitFor("![...document.querySelectorAll('button')].some(b=>b.textContent.includes('Select token'))", 240000, "tokens resolved");
   await p.type("input[inputmode=decimal]", "0.002");
@@ -95,23 +96,21 @@ await step("Swap ETH for token on real Sepolia, reads through Anon-RPC", async (
 await step("Approve (exact amount) + swap token → ETH (swapExactTokensForETH)", async () => {
   await p.click("button[aria-label='Flip tokens']");
   await p.waitFor("[...document.querySelectorAll('button')].some(b=>b.textContent.trim()==='Max')", 240000, "balance loaded");
-  await p.type("input[inputmode=decimal]", "50");   // sell exactly 50 tokens; keep the rest for the liquidity step
+  await p.type("input[inputmode=decimal]", SELL);   // sell exactly 20 USDC; keep the rest for the liquidity step
   await actWait("Approve");
   await confirmed("Approve ");
   const router = "0xeE567Fe1712Faf6149d80dA1E6934E354124CfE3";
   const allowance = BigInt(await rpc("eth_call", [{ to: TOKEN, data: "0xdd62ed3e" + ME.slice(2).toLowerCase().padStart(64, "0") + router.slice(2).toLowerCase().padStart(64, "0") }, "latest"]));
-  if (allowance !== 50n * 10n ** 18n) throw new Error(`allowance ${allowance} != exact 50e18 (unlimited approval?)`);
-  // DDOGE charges a 20% transfer tax: the app must simulate, pick the fee-on-transfer router variant, and need slippage > tax.
-  await p.eval(`(()=>{const s=document.querySelector('select');Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(s,'2500');s.dispatchEvent(new Event('change',{bubbles:true}))})()`);
+  if (allowance !== BigInt(SELL) * 10n ** BigInt(DEC)) throw new Error(`allowance ${allowance} != exact ${SELL} USDC (unlimited approval?)`);
   await actWait("Swap");
   await confirmed("Swap ");
   const left = await balanceOf(TOKEN, ME);
   if (left >= tokenAfter) throw new Error("token balance did not decrease");
-  console.log(`      sold 50 tokens (20% transfer tax handled): ${tokenAfter} -> ${left}`);
+  console.log(`      sold ${SELL} USDC: ${tokenAfter} -> ${left}`);
 });
 
 let lpBal = 0n;
-const PAIR = "0x56033Fc51f277d321DcFA79eEcD5c881a6F3b821";
+const PAIR = "0x72e46e15ef83c896de44B1874B4AF7dDAB5b4F74";   // USDC / WETH
 await step("Add liquidity ETH + token (approve + addLiquidityETH)", async () => {
   await load(`/liquidity?a=${ZERO}&b=${TOKEN}`);
   await p.waitFor("![...document.querySelectorAll('button')].some(b=>b.textContent.includes('Select token'))", 240000, "tokens resolved");
@@ -140,7 +139,7 @@ await step("Remove 50% liquidity (approve LP + removeLiquidityETH)", async () =>
 });
 
 await step("Privacy Center after real transactions: reads anonymised, direct reads = 0", async () => {
-  await p.click("Privacy Center");
+  await p.click("Privacy");
   await p.waitFor("Number(document.querySelector('[data-stat=anon-ok]')?.textContent) > 0", 20000, "anonymised reads counted");
   const anon = Number(await p.eval<string>("document.querySelector('[data-stat=anon-ok]').textContent"));
   const direct = Number(await p.eval<string>("document.querySelector('[data-stat=direct]').textContent"));

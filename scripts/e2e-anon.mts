@@ -27,11 +27,11 @@ await step("Anon-RPC worker boots and passes hash-pinned load (status: ready)", 
 
 await step("Pools page loads real Uniswap V2 pairs through Anon-RPC", async () => {
   await nav("Pools");
-  await p.waitFor("document.body.innerText.includes('Reserve ')", 150000, "pool cards");
+  await p.waitFor("document.body.innerText.toLowerCase().includes('lp supply')", 150000, "pool cards");
 });
 
 await step("Privacy Center: anonymised reads > 0, direct reads = 0, rows labelled Anon-RPC", async () => {
-  await nav("Privacy Center");
+  await nav("Privacy");
   await p.waitFor("document.querySelector('[data-stat=\"anon-ok\"]') !== null", 10000);
   const ok = Number(await stat("Anonymised reads ✓"));
   const direct = Number(await stat("Direct reads"));
@@ -44,7 +44,7 @@ await step("Privacy Center: anonymised reads > 0, direct reads = 0, rows labelle
 
 await step("Swap quote: V2 router getAmountsOut for a real Sepolia pair, read through Anon-RPC", async () => {
   // Pair #311 of the Sepolia V2 factory (has real reserves, verified separately with a direct call).
-  await p.goto(`${BASE}/?from=0x174F4259E885EBaFcDc6c09f38a493c4CA90b85e&to=0x832262D88e6C02A31C7C267B6536cFafe7Fdf3E8`);
+  await p.goto(`${BASE}/swap?from=0x174F4259E885EBaFcDc6c09f38a493c4CA90b85e&to=0x832262D88e6C02A31C7C267B6536cFafe7Fdf3E8`);
   await hydrated();
   await p.waitFor("document.querySelector('input[inputmode=decimal]')", 20000, "swap input");
   // wait for the worker + token lookups (both are Anon-RPC reads), then type an amount
@@ -54,17 +54,26 @@ await step("Swap quote: V2 router getAmountsOut for a real Sepolia pair, read th
   const t = await text();
   if (!/Anon-RPC\s+active, reads are anonymised/.test(t)) throw new Error("swap card does not state Anon-RPC as read transport");
   console.log("      " + (t.match(/Rate\n[^\n]+/)?.[0] ?? "").replace("\n", " "));
-  await nav("Privacy Center");
+  // Network-level proof of hiding: the page's own requests to the RPC host. After the one-time worker bootstrap there must be
+  // none, however many more quotes we ask for (they all go through the worker instead).
+  const rpcHits = () => p.eval<number>("performance.getEntriesByType('resource').filter(e => e.name.includes('publicnode')).length");
+  const before = await rpcHits();
+  await p.type("input[inputmode=decimal]", "0.000002");
+  await new Promise((r) => setTimeout(r, 12000));          // a few mixnet round trips
+  const after = await rpcHits();
+  console.log(`      requests from this page to the RPC host: ${before} before, ${after} after more reads (bootstrap only)`);
+  if (after !== before) throw new Error(`the page contacted the RPC host directly during Anon-RPC reads (${before} -> ${after})`);
+  await nav("Privacy");
   await p.waitFor("document.querySelector('[data-stat=\"anon-ok\"]') !== null", 10000);
   if (Number(await stat("Direct reads")) !== 0) throw new Error("direct reads happened during Anon-RPC quote");
 });
 
 await step("Standard mode generates DIRECT reads and the log says so", async () => {
-  await nav("Privacy Center");
+  await nav("Privacy");
   await p.click("Standard");            // mode switch lives in the Privacy Center
   await nav("Pools");
-  await p.waitFor("document.body.innerText.includes('Reserve ')", 60000);
-  await nav("Privacy Center");
+  await p.waitFor("document.body.innerText.toLowerCase().includes('lp supply')", 60000);
+  await nav("Privacy");
   await p.waitFor("document.querySelector('[data-stat=\"anon-ok\"]') !== null", 10000);
   await p.waitFor("Number(document.querySelector('[data-stat=\"direct\"]')?.textContent) > 0", 30000, "direct reads counted");
   const rows = await p.eval<number>("[...document.querySelectorAll('tbody tr')].filter(r=>r.innerText.includes('Direct RPC') && r.innerText.includes('Success')).length");
@@ -73,12 +82,14 @@ await step("Standard mode generates DIRECT reads and the log says so", async () 
 
 await step("Fail-closed: killed worker => reads fail visibly, NO direct fallback", async () => {
   await p.click("Anon-RPC");            // Privacy Center switch back to Anon-RPC mode
+  await new Promise((r) => setTimeout(r, 4000));   // let Standard-mode reads that were already in flight land, so the baseline is stable
   const before = Number(await stat("Direct reads"));
   await p.click("Kill worker");
   await p.waitFor("document.querySelector('[data-worker=\"failed\"]') !== null", 5000);
   await nav("Pools");
   await p.waitFor("document.body.innerText.includes('Anon-RPC unavailable')", 10000, "unavailable banner");
-  await nav("Privacy Center");
+  await new Promise((r) => setTimeout(r, 3000));   // give any (buggy) fallback time to show up
+  await nav("Privacy");
   await p.waitFor("document.querySelector('[data-stat=\"anon-ok\"]') !== null", 10000);
   const after = Number(await stat("Direct reads"));
   if (after !== before) throw new Error(`direct reads changed ${before} -> ${after}: SILENT FALLBACK`);
