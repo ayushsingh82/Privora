@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useState } from "react";
+import { friendly } from "@/lib/errors";
 import { formatUnits, parseUnits, type Address } from "viem";
 import { useQueryClient } from "@tanstack/react-query";
 import { CHAIN } from "@/lib/ethereum/chains";
@@ -106,7 +107,7 @@ export default function SwapCard() {
   const flip = () => { clearTx(); setFrom(to); setTo(from); setAmount(""); };
 
   return (
-    <div className="w-full max-w-md rounded-3xl border border-line bg-card p-4 shadow-2xl shadow-black/50">
+    <div className="w-full max-w-md rounded-none border border-line bg-card p-4 shadow-2xl shadow-black/50">
       <div className="flex items-center justify-between px-2 pb-2 pt-1">
         <h2 className="text-lg font-semibold">Swap</h2>
         <label className="flex items-center gap-1 text-xs text-muted">Slippage
@@ -116,7 +117,7 @@ export default function SwapCard() {
         </label>
       </div>
 
-      <div className="rounded-2xl border border-line bg-card2 p-4">
+      <div className="rounded-none border border-line bg-card2 p-4">
         <div className="mb-2 text-sm text-muted">You pay</div>
         <div className="flex items-center gap-2">
           <input value={amount} onChange={(e) => { clearTx(); setAmount(e.target.value.replace(/[^0-9.]/g, "")); }} inputMode="decimal" placeholder="0.0" className="mono w-full min-w-0 bg-transparent text-4xl font-medium outline-none placeholder:text-muted/40" />
@@ -124,45 +125,61 @@ export default function SwapCard() {
         </div>
         <div className="mt-2 flex items-center justify-between text-xs text-muted">
           <span>Balance: {fmt(balIn.data, from?.decimals ?? 18)}</span>
-          {balIn.data !== undefined && from && <button className="rounded-md bg-accent/15 px-2 py-0.5 font-semibold text-accent hover:bg-accent/25" onClick={() => setAmount(formatUnits(from.native && balIn.data! > 10n ** 16n ? balIn.data! - 10n ** 16n : balIn.data!, from.decimals))}>Max</button>}
+          {balIn.data !== undefined && from && (
+            <span className="flex gap-1.5">
+              <button className="rounded-md bg-accent/15 px-2 py-0.5 font-semibold text-accent hover:bg-accent/25" onClick={() => setAmount(formatUnits(balIn.data! / 2n, from.decimals))}>Half</button>
+              <button className="rounded-md bg-accent/15 px-2 py-0.5 font-semibold text-accent hover:bg-accent/25" onClick={() => setAmount(formatUnits(from.native && balIn.data! > 10n ** 16n ? balIn.data! - 10n ** 16n : balIn.data!, from.decimals))}>Max</button>
+            </span>
+          )}
         </div>
       </div>
 
       <div className="relative z-10 -my-3 flex justify-center">
-        <button onClick={flip} className="grid h-9 w-9 place-items-center rounded-xl border-4 border-card bg-card2 text-muted transition hover:bg-line hover:text-fg" aria-label="Flip tokens"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v10M4 9l4 4 4-4" /></svg></button>
+        <button onClick={flip} className="grid h-9 w-9 place-items-center rounded-none border-4 border-card bg-card2 text-muted transition hover:bg-line hover:text-fg" aria-label="Flip tokens"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v10M4 9l4 4 4-4" /></svg></button>
       </div>
 
-      <div className="rounded-2xl border border-line bg-card2 p-4">
+      <div className="rounded-none border border-line bg-card2 p-4">
         <div className="mb-2 text-sm text-muted">You receive</div>
         <div className="flex items-center gap-2">
-          <div className="mono w-full min-w-0 truncate text-4xl font-medium text-fg/90">{quote.isFetching && amountIn > 0n ? "…" : out > 0n && to ? fmt(out, to.decimals, 8) : "0.0"}</div>
+          {quote.isFetching && amountIn > 0n
+            ? <div className="skeleton h-10 w-40" aria-label="Fetching quote" />
+            : <div className="mono w-full min-w-0 truncate text-4xl font-medium text-fg/90">{out > 0n && to ? fmt(out, to.decimals, 8) : "0.0"}</div>}
           <TokenSelect value={to} onChange={(t) => { clearTx(); setTo(t); }} exclude={from} />
         </div>
         <div className="mt-2 text-xs text-muted">Balance: {fmt(balOut.data, to?.decimals ?? 18)}</div>
       </div>
 
       {out > 0n && from && to && (
-        <dl className="mt-3 space-y-1 px-2 text-xs text-muted">
-          <div className="flex justify-between"><dt>Rate</dt><dd className="mono">1 {from.symbol} ≈ {fmt((out * 10n ** BigInt(from.decimals)) / amountIn, to.decimals, 6)} {to.symbol}</dd></div>
+        <details open className="group mt-3 rounded-none border border-line px-4 py-3 text-xs text-muted">
+          <summary className="flex cursor-pointer list-none items-center justify-between text-fg">
+            <span className="mono">1 {from.symbol} ≈ {fmt((out * 10n ** BigInt(from.decimals)) / amountIn, to.decimals, 6)} {to.symbol}</span>
+            <span className="flex items-center gap-2 text-muted">
+              {impact !== null && <span className={`rounded-md px-1.5 py-0.5 ${impact > 300 ? "bg-bad/15 text-bad" : "bg-card2"}`}>Impact {(impact / 100).toFixed(2)}%</span>}
+              <svg className="transition group-open:rotate-180" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4" /></svg>
+            </span>
+          </summary>
+          <dl className="mt-3 space-y-1.5 border-t border-line pt-3">
+          <div className="flex justify-between"><dt>Quote source</dt><dd className="mono">Uniswap V2 router (onchain)</dd></div>
           <div className="flex justify-between"><dt>Route</dt><dd className="mono">{quote.data!.path.length === 2 ? "Direct pair" : "via WETH"}</dd></div>
-          <div className="flex justify-between"><dt>Price impact</dt><dd className={`mono ${impact !== null && impact > 300 ? "text-bad" : ""}`}>{impact === null ? "n/a (multi-hop)" : `${(impact / 100).toFixed(2)}%`}</dd></div>
+          <div className="flex justify-between"><dt>Price impact</dt><dd className={`mono ${impact !== null && impact > 300 ? "text-bad" : ""}`}>{impact === null ? (quote.data!.path.length === 2 ? "calculating…" : "n/a (multi-hop)") : `${(impact / 100).toFixed(2)}%`}</dd></div>
           <div className="flex justify-between"><dt>Minimum received</dt><dd className="mono">{fmt(minOut, to.decimals, 8)} {to.symbol}</dd></div>
           <div className="flex justify-between"><dt>LP fee (0.3%)</dt><dd className="mono">{fmt(fee, from.decimals, 8)} {from.symbol}</dd></div>
-        </dl>
+          </dl>
+        </details>
       )}
 
       {slip >= 500 && <p className="mt-2 px-2 text-xs text-accent">High slippage ({slip / 100}%): you may receive far less than quoted and the trade can be sandwiched. Needed only for tokens that charge a transfer fee.</p>}
-      {quote.isError && amountIn > 0n && <p className="mt-2 px-2 text-xs text-bad">{(quote.error as Error).message}</p>}
+      {quote.isError && amountIn > 0n && <p className="mt-2 px-2 text-xs text-bad">{friendly(quote.error)}</p>}
 
       <button
         disabled={!enabled}
         onClick={() => "fn" in btn && btn.fn?.()}
-        className="mt-3 w-full rounded-2xl bg-accent py-4 text-base font-semibold text-accent-fg transition hover:brightness-110 disabled:bg-card2 disabled:text-muted"
+        className="mt-3 w-full rounded-none bg-accent py-4 text-base font-semibold text-accent-fg transition hover:brightness-110 disabled:bg-card2 disabled:text-muted"
       >
         {btn.text}
       </button>
       <TxStatus tx={tx} />
-      <div className="mt-3 flex items-center gap-2 rounded-xl bg-accent/10 px-3 py-2.5 text-xs">
+      <div className="mt-3 flex items-center gap-2 rounded-none bg-accent/10 px-3 py-2.5 text-xs">
         <span className={`h-2 w-2 shrink-0 rounded-full ${anon.mode !== "anon" ? "bg-muted" : anon.status === "ready" ? "bg-ok" : anon.status === "failed" ? "bg-bad" : "bg-accent"}`} />
         <span className="font-semibold text-accent">{anon.mode === "anon" ? "Anon-RPC" : "Standard RPC (direct)"}</span>
         <span className="text-muted">{anon.mode !== "anon" ? "reads are direct" : anon.status === "ready" ? "active, reads are anonymised" : anon.status === "failed" ? "unavailable" : "starting"}</span>

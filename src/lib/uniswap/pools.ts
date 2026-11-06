@@ -77,6 +77,19 @@ export async function recentPairs(offset: number, count: number): Promise<{ tota
   return { total, pools: await fetchPools(addrs as Address[]) };
 }
 
+/** Pools of each featured token against WETH (skips tokens with no pool). Order follows the input. */
+export async function featuredPools(tokens: Token[]): Promise<Pool[]> {
+  const pairs = (await readClient.multicall({
+    contracts: tokens.map((t) => ({ address: CHAIN.factory, abi: factoryAbi, functionName: "getPair", args: [t.address, CHAIN.weth] }) as const),
+    multicallAddress,
+    allowFailure: false,
+  })) as Address[];
+  const live = pairs.filter((a) => a !== zeroAddress);
+  const pools = await fetchPools(live);
+  const order = new Map(live.map((a, i) => [a, i]));
+  return pools.sort((x, y) => (order.get(x.pair) ?? 0) - (order.get(y.pair) ?? 0));
+}
+
 /** Look up by pair address, or by two token addresses (B defaults to WETH). */
 export async function findPool(a: string, b: string): Promise<Pool | null> {
   if (!isAddress(a)) throw new Error("Enter a valid address");

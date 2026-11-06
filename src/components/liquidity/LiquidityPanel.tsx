@@ -130,10 +130,10 @@ export default function LiquidityPanel() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <div className="rounded-3xl border border-line bg-card p-3">
+      <div className="rounded-none border border-line bg-card p-3">
         <h2 className="px-2 pb-2 pt-1 font-semibold">Add liquidity</h2>
         {([[A, setA, amtA, editA, balA, B], [B, setB, amtB, editB, balB, A]] as const).map(([tok, setTok, amt, edit, bal, other], i) => (
-          <div key={i} className="mb-2 rounded-2xl border border-line bg-card2 p-4">
+          <div key={i} className="mb-2 rounded-none border border-line bg-card2 p-4">
             <div className="flex items-center gap-2">
               <input value={amt} onChange={(e) => edit(e.target.value)} placeholder="0.0" inputMode="decimal" className="mono w-full min-w-0 bg-transparent text-2xl outline-none" />
               <TokenSelect value={tok} onChange={setTok} exclude={other} />
@@ -148,10 +148,10 @@ export default function LiquidityPanel() {
             ) : pair.isSuccess ? <span className="text-accent">No pool yet — the first provider sets the initial price.</span> : null}
           </div>
         )}
-        <button disabled={!addBtn.on} onClick={() => addBtn.fn?.()} className="mt-3 w-full rounded-2xl bg-accent py-3.5 font-semibold text-accent-fg hover:brightness-110 disabled:bg-card2 disabled:text-muted">{addBtn.text}</button>
+        <button disabled={!addBtn.on} onClick={() => addBtn.fn?.()} className="mt-3 w-full rounded-none bg-accent py-3.5 font-semibold text-accent-fg hover:brightness-110 disabled:bg-card2 disabled:text-muted">{addBtn.text}</button>
       </div>
 
-      <div className="rounded-3xl border border-line bg-card p-3">
+      <div className="rounded-none border border-line bg-card p-3">
         <h2 className="px-2 pb-2 pt-1 font-semibold">Your position</h2>
         {!w.address ? <p className="p-3 text-sm text-muted">Connect a wallet to see your LP position.</p>
           : !pool ? <p className="p-3 text-sm text-muted">Select two tokens with an existing pool.</p>
@@ -164,9 +164,9 @@ export default function LiquidityPanel() {
                 <dt>Pooled {A!.symbol}</dt><dd className="mono text-right text-fg">{fmt((pool.reserveA * lp) / pool.totalSupply, A!.decimals, 6)}</dd>
                 <dt>Pooled {B!.symbol}</dt><dd className="mono text-right text-fg">{fmt((pool.reserveB * lp) / pool.totalSupply, B!.decimals, 6)}</dd>
               </dl>
-              <div className="flex gap-2">{[25, 50, 75, 100].map((p) => <button key={p} onClick={() => setPct(p)} className={`flex-1 rounded-lg border py-1.5 text-xs ${pct === p ? "border-accent text-accent" : "border-line text-muted"}`}>{p}%</button>)}</div>
-              <div className="rounded-xl bg-card2 p-3 text-xs text-muted">You receive ≈ <span className="mono text-fg">{fmt(rmA, A!.decimals, 6)} {A!.symbol}</span> + <span className="mono text-fg">{fmt(rmB, B!.decimals, 6)} {B!.symbol}</span></div>
-              <button disabled={busy || wrongChain} onClick={needLpApproval ? approveLp : remove} className="w-full rounded-2xl border border-accent py-3 font-semibold text-accent hover:bg-accent/10 disabled:opacity-50">
+              <div className="flex gap-2">{[25, 50, 75, 100].map((p) => <button key={p} onClick={() => setPct(p)} className={`flex-1 rounded-none border py-1.5 text-xs ${pct === p ? "border-line bg-accent/15 text-accent" : "border-line text-muted"}`}>{p}%</button>)}</div>
+              <div className="rounded-none bg-card2 p-3 text-xs text-muted">You receive ≈ <span className="mono text-fg">{fmt(rmA, A!.decimals, 6)} {A!.symbol}</span> + <span className="mono text-fg">{fmt(rmB, B!.decimals, 6)} {B!.symbol}</span></div>
+              <button disabled={busy || wrongChain} onClick={needLpApproval ? approveLp : remove} className="w-full rounded-none border border-accent py-3 font-semibold text-accent hover:bg-accent/10 disabled:opacity-50">
                 {needLpApproval ? "Approve LP token" : "Remove liquidity"}
               </button>
             </div>

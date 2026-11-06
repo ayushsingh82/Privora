@@ -1,6 +1,5 @@
 "use client";
 import { useAnon } from "@/lib/hooks";
-import { CHAIN } from "@/lib/ethereum/chains";
 
 /** Live, honest status chips under the swap card. Every number is counted from real requests this session. */
 export default function PrivacyStrip() {
@@ -14,11 +13,10 @@ export default function PrivacyStrip() {
     </div>
   );
   return (
-    <div className="grid w-full max-w-3xl grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line md:grid-cols-4">
+    <div className="grid w-full max-w-3xl grid-cols-1 gap-px sm:grid-cols-3 overflow-hidden rounded-none border border-line bg-line md:grid-cols-3">
       <Stat k="Read transport" v={<span className="flex items-center gap-2"><span className={`h-2.5 w-2.5 rounded-full ${tone}`} />{state}</span>} />
       <Stat k="Anonymised reads" v={a.anonOk} big />
       <Stat k="Direct reads" v={a.directOk + a.directFailed} big />
-      <Stat k="Network" v={CHAIN.name} />
     </div>
   );
 }

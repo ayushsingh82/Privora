@@ -2,8 +2,8 @@ import Link from "next/link";
 import Logo from "./Logo";
 
 const COLS = [
-  { h: "Trade", l: [["Swap", "/"], ["Liquidity", "/liquidity"], ["Pools", "/pools"]] },
-  { h: "Privacy", l: [["Privacy Center", "/privacy"], ["Settings", "/settings"]] },
+  { h: "Trade", l: [["Swap", "/swap"], ["Liquidity", "/liquidity"], ["Pools", "/pools"]] },
+  { h: "Privacy", l: [["Privacy", "/privacy"], ["Settings", "/settings"]] },
   { h: "Docs", l: [
     ["Anon-RPC integration", "https://github.com/ayushsingh82/ethglobalmumbai/blob/main/docs/ANON_RPC_INTEGRATION.md"],
     ["Test report", "https://github.com/ayushsingh82/ethglobalmumbai/blob/main/docs/TEST_REPORT.md"],

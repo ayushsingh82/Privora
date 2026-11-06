@@ -9,7 +9,7 @@ export default function TxStatus({ tx }: { tx: TxState }) {
   ) : null;
   const cls = tx.phase === "error" ? "border-bad/40 bg-bad/10 text-bad" : tx.phase === "done" ? "border-ok/40 bg-ok/10 text-ok" : "border-line bg-card2 text-muted";
   return (
-    <div className={`mt-3 rounded-xl border px-3 py-2 text-xs ${cls}`}>
+    <div className={`mt-3 rounded-none border px-3 py-2 text-xs ${cls}`}>
       {tx.phase === "wallet" && <>Confirm “{tx.label}” in your wallet…</>}
       {tx.phase === "pending" && <>“{tx.label}” submitted by your wallet{link} — waiting for confirmation (receipt polled via read transport)</>}
       {tx.phase === "done" && <>“{tx.label}” confirmed{link}</>}

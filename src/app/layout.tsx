@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Providers from "@/components/Providers";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import PrivacyBanner from "@/components/PrivacyBanner";
 
 export const metadata: Metadata = {
   title: "Privora — Private Uniswap V2 swaps, powered by Anon-RPC",
@@ -14,12 +11,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="min-h-screen">
-        <Providers>
-          <Header />
-          <PrivacyBanner />
-          <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
-          <Footer />
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

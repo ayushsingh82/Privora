@@ -5,6 +5,7 @@ import { DEFAULT_NETWORK } from "@/lib/anon-rpc/networks";
 import { startWorker, stopWorker } from "@/lib/anon-rpc/manager";
 import { reattach } from "@/lib/ethereum/wallet";
 import { useAnon } from "@/lib/hooks";
+import { isPrivacyBlock } from "@/lib/errors";
 
 /** Refetch every chain read when the transport changes, so no stale data from the other transport is shown. */
 function ModeRefresher() {
@@ -15,7 +16,7 @@ function ModeRefresher() {
 }
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-  const [qc] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: 15_000, refetchOnWindowFocus: false } } }));
+  const [qc] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: 15_000, refetchOnWindowFocus: false, retry: (n, err) => !isPrivacyBlock(err) && n < 2 } } }));
   useEffect(() => {
     startWorker(DEFAULT_NETWORK).catch(() => { /* surfaced in the UI via anon state */ });
     reattach();
