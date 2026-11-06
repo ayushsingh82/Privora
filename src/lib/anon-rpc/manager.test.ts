@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { rpcRead, PrivacyError, anonStore, setReadMode } from "./manager.ts";
+import { rpcRead, PrivacyError, anonStore, setReadMode, bootOrder } from "./manager.ts";
+import { NETWORKS } from "./networks.ts";
 
 test("fail closed: anon mode with no worker rejects and NEVER calls fetch", async () => {
   let fetched = 0;
@@ -40,4 +41,13 @@ test("direct mode is explicit, labelled direct, and counted separately", async (
 test("log never contains request params", async () => {
   const s = anonStore.getSnapshot();
   assert.ok(s.log.every((e) => Object.keys(e).every((k) => ["id", "ts", "method", "transport", "ok", "ms", "error"].includes(k))));
+});
+
+test("boot failover only ever uses anonymising networks, requested one first, never the reference worker", () => {
+  const order = bootOrder("nox");
+  assert.equal(order[0], "nox");
+  assert.ok(order.length > 1, "failover should offer other networks");
+  for (const id of order) assert.equal(NETWORKS.find((n) => n.id === id)?.kind, "network", `${id} must be an anonymising network`);
+  assert.ok(!order.includes("passthrough"), "passthrough does not anonymise and must never be a failover target");
+  assert.deepEqual(bootOrder("tor-js", false), ["tor-js"], "an explicit network choice must not fail over");
 });

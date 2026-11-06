@@ -13,13 +13,18 @@ const I = {
   privacy: "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z",
   settings: "M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4",
 };
-const NAV = [
-  { href: "/swap", label: "Swap", icon: I.swap },
-  { href: "/liquidity", label: "Liquidity", icon: I.liquidity },
-  { href: "/pools", label: "Pools", icon: I.pools },
-  { href: "/privacy", label: "Privacy", icon: I.privacy },
-  { href: "/settings", label: "Settings", icon: I.settings },
+const GROUPS = [
+  { title: "Trade", items: [
+    { href: "/swap", label: "Swap", icon: I.swap },
+    { href: "/liquidity", label: "Liquidity", icon: I.liquidity },
+    { href: "/pools", label: "Pools", icon: I.pools },
+  ] },
+  { title: "Privacy", items: [
+    { href: "/privacy", label: "Privacy", icon: I.privacy },
+    { href: "/settings", label: "Settings", icon: I.settings },
+  ] },
 ];
+const NAV = GROUPS.flatMap((g) => g.items);
 const Icon = ({ d }: { d: string }) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={d} /></svg>
 );
@@ -55,11 +60,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen lg:grid lg:grid-cols-[16rem_minmax(0,1fr)]">
       <aside className="sticky top-0 hidden h-screen flex-col gap-6 bg-card/50 p-5 lg:flex">
         <Link href="/" className="flex items-center gap-2.5 px-2 pt-1 text-lg font-semibold tracking-tight"><Logo size={34} />Privora</Link>
-        <nav className="flex flex-col gap-1">
-          {NAV.map((n) => (
-            <Link key={n.href} href={n.href} className={`flex items-center gap-3 rounded-none px-3.5 py-3 text-sm transition ${active(n.href) ? "bg-accent/15 font-semibold text-accent" : "text-muted hover:bg-card2 hover:text-fg"}`}>
-              <Icon d={n.icon} />{n.label}
-            </Link>
+        <nav className="flex flex-col gap-6">
+          {GROUPS.map((g) => (
+            <div key={g.title} className="flex flex-col gap-1">
+              <div className="px-3.5 pb-1 text-[11px] font-medium uppercase tracking-wider text-muted/70">{g.title}</div>
+              {g.items.map((n) => (
+                <Link key={n.href} href={n.href} className={`relative flex items-center gap-3 px-3.5 py-3 text-sm transition-colors ${active(n.href) ? "bg-accent/15 font-semibold text-accent" : "text-muted hover:bg-card2 hover:text-fg"}`}>
+                  {active(n.href) && <span className="absolute inset-y-0 left-0 w-0.5 bg-accent" />}
+                  <Icon d={n.icon} />{n.label}
+                </Link>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="mt-auto space-y-3">
@@ -70,7 +81,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <div className="min-w-0">
         <header className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-bg/90 px-4 py-4 backdrop-blur lg:px-8">
           <Link href="/" className="flex items-center gap-2 font-semibold lg:hidden"><Logo size={30} />Privora</Link>
-          <div className="hidden lg:block" />
+          <div className="hidden items-center gap-2 text-sm lg:flex"><span className="text-muted">Privora</span><span className="text-muted/50">/</span><span className="font-semibold">{NAV.find((n) => active(n.href))?.label ?? ""}</span></div>
           <WalletButton />
         </header>
         <div className="px-4 lg:px-8"><PrivacyBanner /></div>

@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { DEFAULT_TOKENS, lookupToken, type Token } from "@/lib/tokens";
 import { useTokenBalance, useWallet } from "@/lib/hooks";
 import { formatUnits } from "viem";
@@ -12,7 +13,7 @@ function Row({ t, onPick }: { t: Token; onPick: (t: Token) => void }) {
   const w = useWallet();
   const bal = useTokenBalance(t, w.address);
   return (
-    <button onClick={() => onPick(t)} className="flex w-full items-center justify-between gap-3 rounded-none px-3 py-2 text-left hover:bg-card2">
+    <button onClick={() => onPick(t)} className="flex w-full items-center justify-between gap-3 px-5 py-3 text-left transition-colors hover:bg-card2/40">
       <TokenIcon symbol={t.symbol} address={t.address} size={32} />
       <span className="min-w-0 flex-1">
         <div className="font-medium">{t.symbol}</div>
@@ -28,6 +29,8 @@ export default function TokenSelect({ value, onChange, exclude }: { value: Token
   const [q, setQ] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const list = [...DEFAULT_TOKENS, ...custom].filter(
     (t) => t.address !== exclude?.address && (!q || t.symbol.toLowerCase().includes(q.toLowerCase()) || t.name.toLowerCase().includes(q.toLowerCase()) || t.address.toLowerCase() === q.toLowerCase()),
@@ -50,37 +53,46 @@ export default function TokenSelect({ value, onChange, exclude }: { value: Token
         {value && <TokenIcon symbol={value.symbol} address={value.address} size={22} />}
         {value ? value.symbol : "Select token"} <span className="text-muted">▾</span>
       </button>
-      {open && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" onClick={() => setOpen(false)}>
-          <div className="w-full max-w-sm rounded-none border border-line bg-card p-4" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-3 flex items-center justify-between"><span className="font-semibold">Select a token</span><button onClick={() => setOpen(false)} className="text-muted">✕</button></div>
-            <input
-              autoFocus value={q} onChange={(e) => { setQ(e.target.value); setErr(null); }}
-              placeholder="Search name or paste address"
-              className="mono w-full rounded-none border border-line bg-card2 px-3 py-2 text-sm outline-none"
-            />
+      {open && mounted && createPortal(
+        <div className="fixed inset-0 z-[100] grid place-items-center bg-black/70 p-4 backdrop-blur-sm" onClick={() => setOpen(false)}>
+          <div className="flex max-h-[85vh] w-full max-w-md flex-col border border-line bg-card" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4">
+              <span className="text-lg font-semibold">Select a token</span>
+              <button onClick={() => setOpen(false)} aria-label="Close" className="px-1 text-muted hover:text-fg">✕</button>
+            </div>
+            <div className="relative px-5 pb-4">
+              <svg className="pointer-events-none absolute left-9 top-1/2 -translate-y-[70%] text-muted" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+              <input
+                autoFocus value={q} onChange={(e) => { setQ(e.target.value); setErr(null); }}
+                placeholder="Search name or paste address"
+                className="w-full border border-line bg-card2 py-3 pl-11 pr-3 text-sm outline-none placeholder:text-muted/60"
+              />
+            </div>
             {!q && (
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 px-5 pb-4">
                 {DEFAULT_TOKENS.filter((t) => t.address !== exclude?.address).slice(0, 6).map((t) => (
-                  <button key={t.address} onClick={() => pick(t)} className="flex items-center gap-2 border border-line bg-card2 py-1.5 pl-1.5 pr-3 text-sm font-medium hover:bg-line">
+                  <button key={t.address} onClick={() => pick(t)} className="flex items-center gap-2 border border-line bg-card2 py-1.5 pl-1.5 pr-3 text-sm font-medium transition-colors hover:bg-line">
                     <TokenIcon symbol={t.symbol} address={t.address} size={20} />{t.symbol}
                   </button>
                 ))}
               </div>
             )}
-            <div className="mt-3 max-h-72 overflow-y-auto">
+            <div className="min-h-0 flex-1 divide-y divide-line overflow-y-auto border-t border-line">
               {list.map((t) => <Row key={t.address} t={t} onPick={pick} />)}
               {list.length === 0 && /^0x[0-9a-fA-F]{40}$/.test(q.trim()) && (
-                <button onClick={add} disabled={busy} className="w-full rounded-none bg-accent px-3 py-2 text-sm font-semibold text-accent-fg disabled:opacity-60">
-                  {busy ? "Reading token from chain…" : "Look up & validate token onchain"}
-                </button>
+                <div className="p-5">
+                  <button onClick={add} disabled={busy} className="w-full bg-accent px-3 py-3 text-sm font-semibold text-accent-fg disabled:opacity-60">
+                    {busy ? "Reading token from chain…" : "Look up & validate token onchain"}
+                  </button>
+                </div>
               )}
-              {list.length === 0 && !/^0x[0-9a-fA-F]{40}$/.test(q.trim()) && <p className="p-3 text-sm text-muted">No match. Paste a token contract address to look it up.</p>}
+              {list.length === 0 && !/^0x[0-9a-fA-F]{40}$/.test(q.trim()) && <p className="p-5 text-sm text-muted">No match. Paste a token contract address to look it up.</p>}
             </div>
-            {err && <p className="mt-2 text-xs text-bad">{err}</p>}
-            <p className="mt-2 text-[11px] text-muted">Symbol, name and decimals are read from the contract through the active read transport; non-ERC-20 addresses are rejected.</p>
+            {err && <p className="px-5 pt-3 text-xs text-bad">{err}</p>}
+            <p className="px-5 py-3 text-[11px] text-muted">Symbol, name and decimals are read from the contract through the active read transport.</p>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

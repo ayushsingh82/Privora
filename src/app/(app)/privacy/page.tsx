@@ -10,7 +10,7 @@ const LABEL = { anon: "Anon-RPC", direct: "Direct RPC", bootstrap: "Direct (boot
 const COVERED = ["Balances and allowances", "Pools, reserves and quotes", "Token details", "Receipt polling"];
 const NOT_COVERED = ["Wallet signing and sending", "Your address onchain", "One-time worker setup", "The page load itself"];
 
-function PathLive({ status, mode }: { status: string; mode: string }) {
+function PathLive({ status, mode, attempt }: { status: string; mode: string; attempt: number }) {
   const on = mode === "anon" && status === "ready";
   const nodes = mode === "anon"
     ? [{ t: "Your browser" }, { t: "Anon-RPC worker", w: true }, { t: "Mixnet exit" }, { t: "Ethereum RPC" }]
@@ -20,7 +20,7 @@ function PathLive({ status, mode }: { status: string; mode: string }) {
     <section className="fade-up border border-line bg-card p-5">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="font-semibold">Live read path</h2>
-        <span className="text-xs text-muted">{mode !== "anon" ? "Standard: reads are direct" : on ? "Reads flow through Anon-RPC" : status === "failed" ? "Privacy layer unavailable" : "Starting the worker"}</span>
+        <span className="text-xs text-muted">{mode !== "anon" ? "Standard: reads are direct" : on ? "Reads flow through Anon-RPC" : status === "failed" ? "Privacy layer unavailable" : attempt > 1 ? `Starting the worker (try ${attempt})` : "Starting the worker"}</span>
       </div>
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-0">
         {nodes.map((n, i) => (
@@ -78,7 +78,7 @@ export default function PrivacyCenter() {
         <span className="flex items-center gap-2 border border-line bg-card px-3 py-1.5 text-xs text-muted"><span className="h-2 w-2 animate-pulse rounded-full bg-ok" />Live</span>
       </div>
 
-      <PathLive status={a.status} mode={a.mode} />
+      <PathLive status={a.status} mode={a.mode} attempt={a.attempt} />
 
       <div className="grid grid-cols-2 gap-px bg-line md:grid-cols-5">
         <div className="fade-up bg-card p-5">
@@ -102,7 +102,7 @@ export default function PrivacyCenter() {
         <h2 className="font-semibold">Controls</h2>
         <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
           <ModeToggle />
-          <select value={a.networkId} onChange={(e) => startWorker(e.target.value).catch(() => {})} className="border border-line bg-card2 px-3 py-2">
+          <select value={a.networkId} onChange={(e) => startWorker(e.target.value, { failover: false }).catch(() => {})} className="border border-line bg-card2 px-3 py-2">
             {NETWORKS.map((n) => <option key={n.id} value={n.id}>{n.label}</option>)}
           </select>
           <button onClick={() => startWorker().catch(() => {})} className="bg-card2 px-4 py-2 font-medium hover:bg-line">Restart worker</button>

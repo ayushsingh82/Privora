@@ -27,6 +27,13 @@ export function HeroArt({ className = "" }: { className?: string }) {
       {/* flow lines */}
       <line x1="192" y1="180" x2="252" y2="180" className={`${A} line-flow`} strokeWidth="3" strokeDasharray="6 10" />
       <line x1="368" y1="180" x2="436" y2="180" className={`${A} line-flow`} strokeWidth="3" strokeDasharray="6 10" style={{ animationDelay: ".6s" }} />
+      {/* request packets */}
+      {[0, 1.2].map((d) => (
+        <circle key={d} r="5" className="fill-accent">
+          <animateMotion dur="2.4s" begin={`${d}s`} repeatCount="indefinite" path="M192 180 L436 180" />
+          <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.15;.85;1" dur="2.4s" begin={`${d}s`} repeatCount="indefinite" />
+        </circle>
+      ))}
       {/* shield */}
       <g>
         <path d="M310 108 366 130v50c0 38-24 62-56 76-32-14-56-38-56-76v-50z" className="fill-accent/15 stroke-accent" strokeWidth="3" />
@@ -43,111 +50,171 @@ export function HeroArt({ className = "" }: { className?: string }) {
           </g>
         ))}
       </g>
-      <text x="514" y="86" textAnchor="middle" className="fill-muted" fontSize="13">sees the exit, not you</text>
-      <text x="110" y="290" textAnchor="middle" className="fill-muted" fontSize="13">your browser</text>
-      <text x="310" y="342" textAnchor="middle" className="fill-accent" fontSize="13" fontWeight="600">Anon-RPC</text>
+      <text x="514" y="84" textAnchor="middle" className="fill-muted" fontSize="14">RPC provider</text>
+      <text x="514" y="276" textAnchor="middle" className="fill-accent" fontSize="13">sees the query, not who asked</text>
+      <text x="110" y="290" textAnchor="middle" className="fill-muted" fontSize="14">Your browser</text>
+      <text x="310" y="346" textAnchor="middle" className="fill-accent" fontSize="15" fontWeight="600">Anon-RPC</text>
     </svg>
   );
 }
 
-const frame = "h-24 w-24";
-/** Step 1: lookups travel privately. */
+const card = "fill-card2 stroke-line";
+const T = { fontFamily: "ui-sans-serif, system-ui, sans-serif" } as const;
+const M = { fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" } as const;
+
+/** Step 1: a slice of the request log, every row routed through Anon-RPC. */
 export function StepReadArt() {
   return (
-    <svg viewBox="0 0 96 96" className={frame} aria-hidden>
-      <path d="M8 48c10-18 24-28 40-28s30 10 40 28c-10 18-24 28-40 28S18 66 8 48z" className="fill-accent/10 stroke-accent" strokeWidth="3" strokeLinejoin="round" />
-      <circle cx="48" cy="48" r="11" className="fill-accent" />
-      <path d="M18 80 78 16" className="stroke-bg" strokeWidth="9" strokeLinecap="round" />
-      <path d="M18 80 78 16" className="stroke-accent" strokeWidth="3" strokeLinecap="round" />
-    </svg>
-  );
-}
-/** Step 2: your wallet signs. */
-export function StepWalletArt() {
-  return (
-    <svg viewBox="0 0 96 96" className={frame} aria-hidden>
-      <rect x="12" y="26" width="72" height="50" className="fill-accent/10 stroke-accent" strokeWidth="3" />
-      <path d="M12 38h72" className="stroke-accent" strokeWidth="3" />
-      <rect x="58" y="50" width="26" height="16" className="fill-bg stroke-accent" strokeWidth="3" />
-      <circle cx="68" cy="58" r="3.5" className="fill-accent" />
-      <path d="M22 26 62 12l6 14" className="stroke-accent" strokeWidth="3" fill="none" strokeLinejoin="round" />
-    </svg>
-  );
-}
-/** Step 3: verify in the log. */
-export function StepVerifyArt() {
-  return (
-    <svg viewBox="0 0 96 96" className={frame} aria-hidden>
-      <rect x="10" y="12" width="56" height="66" className="fill-accent/10 stroke-accent" strokeWidth="3" />
-      {[28, 42, 56].map((y) => <path key={y} d={`M20 ${y}h30`} className="stroke-accent" strokeWidth="3" strokeLinecap="round" />)}
-      <circle cx="64" cy="62" r="17" className="fill-bg stroke-accent" strokeWidth="3" />
-      <path d="M57 62l5 5 9-10" className="stroke-ok" strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M76 75l10 10" className="stroke-accent" strokeWidth="4" strokeLinecap="round" />
+    <svg viewBox="0 0 260 160" className="h-auto w-full" role="img" aria-label="Request log where every lookup is routed through Anon-RPC">
+      <rect x="2" y="2" width="256" height="156" className={card} strokeWidth="2" />
+      <rect x="2" y="2" width="256" height="32" className="fill-card" />
+      <text x="16" y="23" fontSize="12" fontWeight="600" className="fill-fg" style={T}>Request activity</text>
+      <circle cx="206" cy="18" r="3.5" className="fill-ok" /><text x="214" y="22" fontSize="10" className="fill-muted" style={T}>Live</text>
+      {[54, 84, 114].map((y, i) => (
+        <g key={y}>
+          <text x="16" y={y + 4} fontSize="11" className="fill-fg" style={M}>eth_call</text>
+          <rect x="88" y={y - 9} width="68" height="20" className="fill-accent/20" />
+          <text x="122" y={y + 5} textAnchor="middle" fontSize="10" fontWeight="600" className="fill-accent" style={T}>Anon-RPC</text>
+          <rect x="166" y={y - 2} width={[40, 28, 52][i]} height="5" className="fill-accent/60" />
+          <circle cx="236" cy={y + 1} r="8" className="fill-ok/20" />
+          <path d={`M232 ${y + 1}l3 3 5-6`} className="stroke-ok" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </g>
+      ))}
+      <line x1="2" y1="136" x2="258" y2="136" className="stroke-line" />
+      <text x="16" y="151" fontSize="10" className="fill-muted" style={T}>method and route only, never parameters</text>
     </svg>
   );
 }
 
-/** Compare panels. */
+/** Step 2: the wallet's own confirmation. */
+export function StepWalletArt() {
+  return (
+    <svg viewBox="0 0 260 160" className="h-auto w-full" role="img" aria-label="Wallet confirmation dialog">
+      <rect x="2" y="2" width="256" height="156" className={card} strokeWidth="2" />
+      <circle cx="26" cy="24" r="11" className="fill-accent/20" />
+      <path d="M20 22h12v8H20zM20 22l9-5v5" className="stroke-accent" fill="none" strokeWidth="2" strokeLinejoin="round" />
+      <text x="46" y="28" fontSize="13" fontWeight="600" className="fill-fg" style={T}>Confirm swap</text>
+      <text x="244" y="28" textAnchor="end" fontSize="10" className="fill-muted" style={T}>Your wallet</text>
+      {[["You pay", 60], ["You receive", 84]].map(([l, y]) => (
+        <g key={l as string}>
+          <text x="16" y={(y as number) + 4} fontSize="11" className="fill-muted" style={T}>{l}</text>
+          <rect x="120" y={(y as number) - 5} width="124" height="12" className="fill-line" />
+        </g>
+      ))}
+      <text x="16" y="112" fontSize="11" className="fill-muted" style={T}>Approval</text>
+      <text x="244" y="112" textAnchor="end" fontSize="11" fontWeight="600" className="fill-ok" style={T}>Exact amount</text>
+      <rect x="16" y="124" width="100" height="26" className="fill-bg stroke-line" strokeWidth="1.5" />
+      <text x="66" y="141" textAnchor="middle" fontSize="12" className="fill-muted" style={T}>Reject</text>
+      <rect x="128" y="124" width="116" height="26" className="fill-accent" />
+      <text x="186" y="141" textAnchor="middle" fontSize="12" fontWeight="700" className="fill-bg" style={T}>Confirm</text>
+    </svg>
+  );
+}
+
+/** Step 3: the proof, private reads up and direct reads at zero. */
+export function StepVerifyArt() {
+  const bars = [14, 26, 20, 36, 30, 44, 38, 50];
+  return (
+    <svg viewBox="0 0 260 160" className="h-auto w-full" role="img" aria-label="Counters showing private reads rising and direct reads at zero">
+      <rect x="2" y="2" width="256" height="156" className={card} strokeWidth="2" />
+      <rect x="14" y="14" width="150" height="132" className="fill-card" />
+      <text x="26" y="34" fontSize="10" letterSpacing="1" className="fill-muted" style={T}>PRIVATE READS</text>
+      {bars.map((h, i) => <rect key={i} x={28 + i * 16} y={130 - h} width="10" height={h} className="fill-accent" opacity={0.35 + i * 0.09} />)}
+      <text x="26" y="66" fontSize="22" fontWeight="700" className="fill-ok" style={M}>128</text>
+      <rect x="174" y="14" width="72" height="132" className="fill-card" />
+      <text x="184" y="34" fontSize="10" letterSpacing="1" className="fill-muted" style={T}>DIRECT</text>
+      <text x="184" y="80" fontSize="34" fontWeight="700" className="fill-fg" style={M}>0</text>
+      <circle cx="196" cy="116" r="10" className="fill-ok/20" />
+      <path d="M191 116l4 4 7-8" className="stroke-ok" fill="none" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      <text x="212" y="120" fontSize="10" className="fill-ok" style={T}>none</text>
+    </svg>
+  );
+}
+
+/** Compare: what the RPC provider can link. */
 export function ExposedArt() {
   return (
-    <svg viewBox="0 0 160 96" className="h-24 w-40" aria-hidden>
-      {[34, 50, 66].map((r, i) => <circle key={r} cx="80" cy="48" r={r} className="stroke-bad" fill="none" strokeWidth="1.5" opacity={0.5 - i * 0.14} />)}
-      <path d="M32 48c12-18 28-28 48-28s36 10 48 28c-12 18-28 28-48 28S44 66 32 48z" className="fill-bad/10 stroke-bad" strokeWidth="3" strokeLinejoin="round" />
-      <circle cx="80" cy="48" r="12" className="fill-bad" />
-      <circle cx="84" cy="44" r="4" className="fill-bg" />
+    <svg viewBox="0 0 320 84" className="h-auto w-full max-w-[320px]" role="img" aria-label="Your identity reaches the RPC provider with every query">
+      <rect x="2" y="22" width="78" height="40" className={card} strokeWidth="2" />
+      <text x="41" y="47" textAnchor="middle" fontSize="12" className="fill-fg" style={T}>You</text>
+      <line x1="80" y1="42" x2="238" y2="42" className="stroke-bad line-flow" strokeWidth="2.5" strokeDasharray="6 8" />
+      <rect x="112" y="28" width="82" height="28" className="fill-bad/20 stroke-bad" strokeWidth="1.5" />
+      <text x="153" y="46" textAnchor="middle" fontSize="11" fontWeight="600" className="fill-bad" style={T}>who you are</text>
+      <rect x="238" y="22" width="80" height="40" className={card} strokeWidth="2" />
+      <text x="278" y="47" textAnchor="middle" fontSize="12" className="fill-fg" style={T}>RPC</text>
     </svg>
   );
 }
 export function VeiledArt() {
   return (
-    <svg viewBox="0 0 160 96" className="h-24 w-40" aria-hidden>
-      <path d="M80 8 124 24v26c0 22-18 34-44 44-26-10-44-22-44-44V24z" className="fill-accent/15 stroke-accent" strokeWidth="3" strokeLinejoin="round" />
-      <path d="M58 50c6-10 14-15 22-15s16 5 22 15c-6 10-14 15-22 15S64 60 58 50z" className="stroke-accent" fill="none" strokeWidth="3" strokeLinejoin="round" />
-      <path d="M62 70 98 30" className="stroke-bg" strokeWidth="8" strokeLinecap="round" />
-      <path d="M62 70 98 30" className="stroke-accent" strokeWidth="3" strokeLinecap="round" />
+    <svg viewBox="0 0 320 84" className="h-auto w-full max-w-[320px]" role="img" aria-label="The RPC provider receives the query from an anonymous mixnet exit">
+      <rect x="2" y="22" width="62" height="40" className={card} strokeWidth="2" />
+      <text x="33" y="47" textAnchor="middle" fontSize="12" className="fill-fg" style={T}>You</text>
+      <line x1="64" y1="42" x2="124" y2="42" className="stroke-accent line-flow" strokeWidth="2.5" strokeDasharray="6 8" />
+      <path d="M160 8 192 20v22c0 18-13 29-32 36-19-7-32-18-32-36V20z" className="fill-accent/20 stroke-accent" strokeWidth="2.5" strokeLinejoin="round" />
+      <path d="M148 42l9 9 16-18" className="stroke-accent" fill="none" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+      <line x1="196" y1="42" x2="252" y2="42" className="stroke-accent line-flow" strokeWidth="2.5" strokeDasharray="6 8" />
+      <rect x="196" y="62" width="82" height="18" className="fill-accent/20" />
+      <text x="237" y="75" textAnchor="middle" fontSize="10" fontWeight="600" className="fill-accent" style={T}>anonymous exit</text>
+      <rect x="252" y="22" width="66" height="40" className={card} strokeWidth="2" />
+      <text x="285" y="47" textAnchor="middle" fontSize="12" className="fill-fg" style={T}>RPC</text>
     </svg>
   );
 }
 
-/** Feature art. */
-const featureBox = "h-20 w-20 shrink-0";
+/** Feature illustrations: small product UI, not icons. */
 export function FeatureArt({ kind }: { kind: "lock" | "layers" | "key" | "list" }) {
+  const wrap = "h-auto w-full max-w-[210px] shrink-0";
   if (kind === "lock") return (
-    <svg viewBox="0 0 80 80" className={featureBox} aria-hidden>
-      <path d="M26 36V26a14 14 0 0 1 28 0v10" fill="none" className="stroke-accent" strokeWidth="4" />
-      <rect x="16" y="36" width="48" height="34" className="fill-accent/15 stroke-accent" strokeWidth="4" />
-      <circle cx="40" cy="52" r="5" className="fill-accent" />
+    <svg viewBox="0 0 210 120" className={wrap} aria-hidden>
+      <rect x="2" y="2" width="206" height="116" className={card} strokeWidth="2" />
+      {[["Direct fallback", 34, false], ["Anon-RPC only", 78, true]].map(([l, y, on]) => (
+        <g key={l as string}>
+          <text x="14" y={(y as number) + 5} fontSize="12" className={on ? "fill-fg" : "fill-muted"} style={T}>{l}</text>
+          <rect x="150" y={(y as number) - 9} width="44" height="24" className={on ? "fill-accent" : "fill-line"} />
+          <rect x={on ? 174 : 154} y={(y as number) - 5} width="16" height="16" className={on ? "fill-bg" : "fill-muted"} />
+        </g>
+      ))}
+      <line x1="14" y1="56" x2="196" y2="56" className="stroke-line" />
+      <text x="14" y="108" fontSize="10" className="fill-ok" style={T}>Locked: reads stop, never leak</text>
     </svg>
   );
   if (kind === "layers") return (
-    <svg viewBox="0 0 80 80" className={featureBox} aria-hidden>
-      <path d="M40 12 70 28 40 44 10 28z" className="fill-accent/25 stroke-accent" strokeWidth="3" strokeLinejoin="round" />
-      <path d="M10 40 40 56 70 40" fill="none" className="stroke-accent" strokeWidth="3" strokeLinejoin="round" />
-      <path d="M10 52 40 68 70 52" fill="none" className="stroke-accent" strokeWidth="3" strokeLinejoin="round" opacity=".6" />
+    <svg viewBox="0 0 210 120" className={wrap} aria-hidden>
+      {[["Router02", 6, "fill-accent/25 stroke-accent"], ["Pair", 44, "fill-card2 stroke-line"], ["Factory", 82, "fill-card2 stroke-line"]].map(([l, y, c], i) => (
+        <g key={l as string}>
+          <rect x={10 + i * 12} y={y as number} width="170" height="30" className={c as string} strokeWidth="2" />
+          <text x={22 + i * 12} y={(y as number) + 20} fontSize="12" fontWeight="600" className={i === 0 ? "fill-accent" : "fill-fg"} style={T}>{l}</text>
+          <text x={168 + i * 12} y={(y as number) + 20} textAnchor="end" fontSize="9" className="fill-muted" style={M}>unmodified</text>
+        </g>
+      ))}
     </svg>
   );
   if (kind === "key") return (
-    <svg viewBox="0 0 80 80" className={featureBox} aria-hidden>
-      <circle cx="28" cy="40" r="16" className="fill-accent/15 stroke-accent" strokeWidth="4" />
-      <circle cx="28" cy="40" r="5" className="fill-accent" />
-      <path d="M44 40h28M62 40v10M54 40v7" className="stroke-accent" strokeWidth="4" strokeLinecap="round" />
+    <svg viewBox="0 0 210 120" className={wrap} aria-hidden>
+      <rect x="2" y="2" width="206" height="116" className={card} strokeWidth="2" />
+      {["Session 1", "Session 2", "Session 3"].map((l, i) => (
+        <g key={l}>
+          <text x="14" y={32 + i * 32} fontSize="11" className="fill-muted" style={T}>{l}</text>
+          <rect x="80" y={18 + i * 32} width="116" height="22" className="fill-bg stroke-line" strokeWidth="1.5" />
+          <circle cx="94" cy={29 + i * 32} r="5" className={["fill-accent", "fill-ok", "fill-muted"][i]} />
+          <text x="108" y={33 + i * 32} fontSize="11" className="fill-fg" style={M}>{["•••• a1", "•••• 9c", "•••• 4e"][i]}</text>
+        </g>
+      ))}
     </svg>
   );
   return (
-    <svg viewBox="0 0 80 80" className={featureBox} aria-hidden>
-      <rect x="14" y="12" width="52" height="56" className="fill-accent/10 stroke-accent" strokeWidth="4" />
-      {[26, 40, 54].map((y) => <g key={y}><circle cx="26" cy={y} r="3" className="fill-accent" /><path d={`M36 ${y}h20`} className="stroke-accent" strokeWidth="4" strokeLinecap="round" /></g>)}
-    </svg>
-  );
-}
-
-/** Closing section. */
-export function ShieldArt() {
-  return (
-    <svg viewBox="0 0 240 240" className="h-56 w-56" aria-hidden>
-      {[110, 90, 70].map((r, i) => <circle key={r} cx="120" cy="120" r={r} fill="none" className="stroke-accent line-flow" strokeWidth="1.5" strokeDasharray="4 8" opacity={0.55 - i * 0.12} style={{ animationDelay: `${i * 0.5}s` }} />)}
-      <path d="M120 40 176 62v52c0 34-22 56-56 70-34-14-56-36-56-70V62z" className="fill-accent/20 stroke-accent" strokeWidth="4" strokeLinejoin="round" />
-      <path d="M92 118l20 20 38-42" fill="none" className="stroke-accent" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" />
+    <svg viewBox="0 0 210 120" className={wrap} aria-hidden>
+      <rect x="2" y="2" width="206" height="116" className={card} strokeWidth="2" />
+      {[["method", "route", "ms"], ["eth_call", "Anon", "1.2s"], ["eth_call", "Anon", "0.9s"]].map((r, i) => (
+        <g key={i}>
+          <text x="14" y={26 + i * 22} fontSize="10" className={i === 0 ? "fill-muted" : "fill-fg"} style={i === 0 ? T : M}>{r[0]}</text>
+          <text x="96" y={26 + i * 22} fontSize="10" className={i === 0 ? "fill-muted" : "fill-accent"} style={T}>{r[1]}</text>
+          <text x="196" y={26 + i * 22} textAnchor="end" fontSize="10" className="fill-muted" style={M}>{r[2]}</text>
+        </g>
+      ))}
+      <rect x="14" y="78" width="182" height="26" className="fill-bad/10 stroke-bad" strokeWidth="1.5" strokeDasharray="4 3" />
+      <text x="105" y="95" textAnchor="middle" fontSize="11" className="fill-bad" style={T}>params, addresses: never stored</text>
     </svg>
   );
 }

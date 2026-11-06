@@ -3,7 +3,8 @@ import { useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { CHAIN } from "@/lib/ethereum/chains";
 import { featuredPools, findPool, recentPairs } from "@/lib/uniswap/pools";
-import { FEATURED_TOKENS } from "@/lib/tokens";
+import { DEFAULT_TOKENS, FEATURED_TOKENS } from "@/lib/tokens";
+import TokenIcon from "@/components/TokenIcon";
 import { useReadsReady } from "@/lib/hooks";
 import { friendly, isPrivacyBlock } from "@/lib/errors";
 import PoolCard, { POOL_COLS } from "@/components/PoolCard";
@@ -22,10 +23,77 @@ function PoolTable({ pools }: { pools: Pool[] }) {
 
 const PAGE = 6;
 
+const isAddr = (v: string) => /^0x[0-9a-fA-F]{40}$/.test(v.trim());
+
+/** One smart box: type a symbol or name, or paste a token / pool address. Optional second token to look up a specific pair. */
+function PoolSearch({ onSearch, busy }: { onSearch: (a: string, b: string) => void; busy: boolean }) {
+  const [q, setQ] = useState("");
+  const [q2, setQ2] = useState("");
+  const [two, setTwo] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [hint, setHint] = useState<string | null>(null);
+  const find = (v: string) => { const l = v.trim().toLowerCase(); return l ? DEFAULT_TOKENS.filter((t) => !t.native && (t.symbol.toLowerCase().includes(l) || t.name.toLowerCase().includes(l))) : []; };
+  const matches = isAddr(q) ? [] : find(q).slice(0, 6);
+  const toAddr = (v: string) => (isAddr(v) ? v.trim() : find(v)[0]?.address ?? "");
+  const run = (a: string) => {
+    const b2 = two && q2.trim() ? toAddr(q2) : "";
+    if (two && q2.trim() && !b2) { setHint("Second token not found. Pick a symbol from the list or paste an address."); return; }
+    setHint(null); setOpen(false); onSearch(a, b2);
+  };
+  const submit = () => {
+    const a = toAddr(q);
+    if (!a) { setHint(q.trim() ? "No match. Try USDC or LINK, or paste a token or pool address." : "Type a token or paste an address."); return; }
+    if (!isAddr(q)) setQ(find(q)[0].symbol);
+    run(a);
+  };
+  const box = "w-full border border-line bg-card2 py-3 pl-11 pr-10 text-sm outline-none placeholder:text-muted/60";
+  return (
+    <div className="border border-line bg-card p-5">
+      <form onSubmit={(e) => { e.preventDefault(); submit(); }} className="flex flex-col gap-3 md:flex-row">
+        <div className="relative flex-1">
+          <svg className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+          <input value={q} onChange={(e) => { setQ(e.target.value); setHint(null); setOpen(true); }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)} placeholder="Search a token or paste an address" className={box} aria-label="Search pools" autoComplete="off" spellCheck={false} />
+          {q && <button type="button" onClick={() => { setQ(""); setHint(null); }} aria-label="Clear" className="absolute right-3 top-1/2 -translate-y-1/2 px-1 text-muted hover:text-fg">✕</button>}
+          {open && matches.length > 0 && (
+            <ul className="absolute left-0 right-0 top-full z-20 mt-1 border border-line bg-card shadow-2xl shadow-black/60">
+              {matches.map((t) => (
+                <li key={t.address}>
+                  <button type="button" onMouseDown={(e) => { e.preventDefault(); setQ(t.symbol); run(t.address); }} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-card2">
+                    <TokenIcon symbol={t.symbol} address={t.address} size={28} />
+                    <span className="font-medium">{t.symbol}</span><span className="truncate text-sm text-muted">{t.name}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <button disabled={!q.trim() || busy} className="bg-accent px-8 py-3 text-sm font-semibold text-accent-fg transition hover:brightness-110 disabled:opacity-40">{busy ? "Searching…" : "Search"}</button>
+      </form>
+
+      {two && (
+        <div className="relative mt-3">
+          <input value={q2} onChange={(e) => { setQ2(e.target.value); setHint(null); }} placeholder="Second token: symbol or address (default WETH)" className={`${box} pl-4`} aria-label="Second token" autoComplete="off" spellCheck={false} />
+        </div>
+      )}
+      {hint && <p className="mt-3 text-sm text-bad">{hint}</p>}
+
+      <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+        <span className="text-xs uppercase tracking-wider text-muted">Popular</span>
+        {FEATURED_TOKENS.map((t) => (
+          <button key={t.address} type="button" onClick={() => { setQ(t.symbol); setHint(null); run(t.address); }} className="flex items-center gap-2 border border-line bg-card2 py-1.5 pl-1.5 pr-3 font-medium hover:bg-line">
+            <TokenIcon symbol={t.symbol} address={t.address} size={20} />{t.symbol}
+          </button>
+        ))}
+        <button type="button" onClick={() => { setTwo((v) => !v); setQ2(""); setHint(null); }} className="ml-auto text-xs text-muted hover:text-fg">{two ? "Remove second token" : "Pair with another token"}</button>
+      </div>
+    </div>
+  );
+}
+
+
+
 export default function Pools() {
   const { ready, mode } = useReadsReady();
-  const [a, setA] = useState("");
-  const [b, setB] = useState("");
   const [submitted, setSubmitted] = useState<{ a: string; b: string } | null>(null);
 
   const list = useInfiniteQuery({
@@ -61,11 +129,7 @@ export default function Pools() {
         </div>
       </div>
 
-      <form onSubmit={(e) => { e.preventDefault(); setSubmitted({ a, b }); }} className="grid gap-3 rounded-none border border-line bg-card p-5 md:grid-cols-[1fr_1fr_auto]">
-        <input value={a} onChange={(e) => setA(e.target.value)} placeholder="Token address (or pair address)" className="mono rounded-none border border-line bg-card2 px-3 py-2 text-sm outline-none" />
-        <input value={b} onChange={(e) => setB(e.target.value)} placeholder="Second token (optional, defaults to WETH)" className="mono rounded-none border border-line bg-card2 px-3 py-2 text-sm outline-none" />
-        <button disabled={!a} className="rounded-none bg-accent px-5 py-2 text-sm font-semibold text-accent-fg disabled:opacity-50">Search</button>
-      </form>
+      <PoolSearch busy={found.isFetching} onSearch={(a, b) => setSubmitted({ a, b })} />
 
       {submitted && (
         <div>

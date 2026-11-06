@@ -3,7 +3,7 @@
 // Request params are never logged (they contain wallet addresses); only the JSON-RPC method name.
 
 import type { AnonRpcWorker as AnonRpcWorkerType } from "@anon-rpc/browser-harness";
-import { BOOTSTRAP_RPC, getNetwork, DEFAULT_NETWORK, type AnonNetwork } from "./networks.ts";
+import { BOOTSTRAP_RPC, getNetwork, DEFAULT_NETWORK, NETWORKS, type AnonNetwork } from "./networks.ts";
 
 export type WorkerStatus = "idle" | "starting" | "ready" | "failed";
 export type ReadMode = "anon" | "direct";
@@ -33,6 +33,8 @@ export interface AnonState {
   lastAnonAt: number | null;
   startedAt: number | null;
   readyAt: number | null;
+  /** Boot attempt in progress (1-based), 0 when idle. Shown so a slow start is visible, not silent. */
+  attempt: number;
   /** Number of distinct isolation keys handed to the worker this session (never the keys themselves). */
   isolationKeys: number;
   log: LogEntry[];
@@ -53,6 +55,7 @@ const initial = (networkId = DEFAULT_NETWORK): AnonState => ({
   lastAnonAt: null,
   startedAt: null,
   readyAt: null,
+  attempt: 0,
   isolationKeys: 0,
   log: [],
 });
@@ -94,51 +97,89 @@ export function setReadMode(mode: ReadMode) {
   record({ method: `mode → ${mode === "anon" ? "Anon-RPC" : "Standard RPC"}`, transport: mode, ok: true, ms: 0 }, { mode });
 }
 
-export async function startWorker(networkId: string = state.networkId): Promise<void> {
-  stopWorker(false);
-  const gen = ++generation;
-  const net = getNetwork(networkId);
-  const bootstrapUrl = BOOTSTRAP_RPC[net.specifierChainId];
-  set({ networkId: net.id, kind: net.kind, status: "starting", error: null, startedAt: Date.now(), readyAt: null });
+// A cold public mixnet sometimes needs more than one try to open its first tunnels, and a worker can hang in "starting".
+// So a boot has a watchdog, is retried, and (unless the user picked a network on purpose) fails over to the next
+// ANONYMISING network. It never falls back to a direct connection: every network in the list is an anonymising one.
+const BOOT_TIMEOUT_MS = 45_000;
+const BOOT_ATTEMPTS = 2;
 
-  try {
-    const { AnonRpcWorker } = await import("@anon-rpc/browser-harness");
-    const w = new AnonRpcWorker({
-      address: net.specifier,
-      config: net.config as never,
-      preExisting: {
-        rpcProvider: {
-          request: async ({ method, params }: { method: string; params?: unknown }) => {
-            const t0 = performance.now();
-            try {
-              const res = await fetch(bootstrapUrl, {
-                method: "POST",
-                headers: { "content-type": "application/json" },
-                body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params: params ?? [] }),
-              });
-              const j = await res.json();
-              if (j.error) throw new Error(j.error.message ?? "bootstrap RPC error");
-              record({ method: `${method} (specifier bootstrap)`, transport: "bootstrap", ok: true, ms: performance.now() - t0 }, { bootstrapOk: state.bootstrapOk + 1 });
-              return j.result;
-            } catch (e) {
-              record({ method: `${method} (specifier bootstrap)`, transport: "bootstrap", ok: false, ms: performance.now() - t0, error: msg(e) });
-              throw e;
-            }
-          },
+/** Networks to try, in order: the requested one first, then the other anonymising networks. */
+export function bootOrder(first: string, failover = true): string[] {
+  if (!failover) return [first];
+  return [first, ...NETWORKS.filter((n) => n.kind === "network" && n.id !== first).map((n) => n.id)];
+}
+
+async function bootOnce(net: AnonNetwork, gen: number): Promise<void> {
+  const bootstrapUrl = BOOTSTRAP_RPC[net.specifierChainId];
+  const { AnonRpcWorker } = await import("@anon-rpc/browser-harness");
+  const w = new AnonRpcWorker({
+    address: net.specifier,
+    config: net.config as never,
+    preExisting: {
+      rpcProvider: {
+        request: async ({ method, params }: { method: string; params?: unknown }) => {
+          const t0 = performance.now();
+          try {
+            const res = await fetch(bootstrapUrl, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params: params ?? [] }),
+            });
+            const j = await res.json();
+            if (j.error) throw new Error(j.error.message ?? "bootstrap RPC error");
+            record({ method: `${method} (specifier bootstrap)`, transport: "bootstrap", ok: true, ms: performance.now() - t0 }, { bootstrapOk: state.bootstrapOk + 1 });
+            return j.result;
+          } catch (e) {
+            record({ method: `${method} (specifier bootstrap)`, transport: "bootstrap", ok: false, ms: performance.now() - t0, error: msg(e) });
+            throw e;
+          }
         },
       },
-    });
-    worker = w;
-    await w.ready;
-    if (gen !== generation) return; // superseded
-    set({ status: "ready", readyAt: Date.now(), error: null });
+    },
+  });
+  worker = w;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      w.ready,
+      new Promise<never>((_, rej) => { timer = setTimeout(() => rej(new Error(`Worker did not become ready within ${BOOT_TIMEOUT_MS / 1000}s`)), BOOT_TIMEOUT_MS); }),
+    ]);
   } catch (e) {
-    if (gen !== generation) return;
-    try { worker?.close(); } catch { /* ignore */ }
-    worker = null;
-    set({ status: "failed", error: e instanceof Error ? `${e.name}: ${e.message}` : String(e) });
+    try { w.close(); } catch { /* ignore */ }
+    if (worker === w) worker = null;
     throw e;
+  } finally {
+    clearTimeout(timer);
   }
+  if (gen !== generation) { try { w.close(); } catch { /* ignore */ } if (worker === w) worker = null; }
+}
+
+export async function startWorker(networkId: string = state.networkId, opts: { failover?: boolean } = {}): Promise<void> {
+  stopWorker(false);
+  const gen = ++generation;
+  const order = bootOrder(getNetwork(networkId).id, opts.failover ?? true);
+  const t0 = Date.now();
+  let lastErr: unknown = new Error("Anon-RPC worker could not start");
+  for (const id of order) {
+    const net = getNetwork(id);
+    for (let attempt = 1; attempt <= BOOT_ATTEMPTS; attempt++) {
+      if (gen !== generation) return;
+      set({ networkId: net.id, kind: net.kind, status: "starting", error: null, startedAt: t0, readyAt: null, attempt });
+      try {
+        await bootOnce(net, gen);
+        if (gen !== generation) return; // superseded
+        set({ status: "ready", readyAt: Date.now(), error: null, attempt: 0 });
+        return;
+      } catch (e) {
+        lastErr = e;
+        if (gen !== generation) return;
+        await sleep(1500 * attempt);
+      }
+    }
+  }
+  if (gen !== generation) return;
+  set({ status: "failed", attempt: 0, error: lastErr instanceof Error ? `${lastErr.name}: ${lastErr.message}` : String(lastErr) });
+  throw lastErr;
 }
 
 export function stopWorker(resetStatus = true) {
