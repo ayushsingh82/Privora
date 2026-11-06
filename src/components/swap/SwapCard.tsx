@@ -10,6 +10,7 @@ import { useAllowance, usePair, useQuote, useReadsReady, useTokenBalance, useUrl
 import { connect, getWalletClient, switchToAppChain } from "@/lib/ethereum/wallet";
 import { bufferedGas, firstValid, runTx, type TxState } from "@/lib/ethereum/tx";
 import { readClient } from "@/lib/ethereum/read-client";
+import { setSettings, useSettings } from "@/lib/settings";
 import TokenSelect from "../TokenSelect";
 import TxStatus from "../TxStatus";
 
@@ -26,7 +27,7 @@ export default function SwapCard() {
   const [from, setFrom] = useState<Token | null>(ETH);
   const [to, setTo] = useState<Token | null>(WETH);
   const [amount, setAmount] = useState("");
-  const [slip, setSlip] = useState(50); // bps
+  const { slippageBps: slip, deadlineMin } = useSettings();
   const [tx, setTx] = useState<TxState>({ phase: "idle" });
 
   useUrlTokens(useCallback((slot, t) => (slot === 0 ? setFrom(t) : setTo(t)), []));
@@ -64,7 +65,7 @@ export default function SwapCard() {
     if (!from || !to || !w.address || !quote.data) return;
     const c = getWalletClient();
     const path = quote.data.path as Address[];
-    const deadline = BigInt(Math.floor(Date.now() / 1000) + 20 * 60);
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + deadlineMin * 60);
     const label = `Swap ${from.symbol} → ${to.symbol}`;
     const me = w.address;
     type Call = { fn: string; args: unknown[]; value?: bigint };
@@ -109,8 +110,8 @@ export default function SwapCard() {
       <div className="flex items-center justify-between px-2 pb-2 pt-1">
         <h2 className="font-semibold">Swap</h2>
         <label className="flex items-center gap-1 text-xs text-muted">Slippage
-          <select value={slip} onChange={(e) => setSlip(Number(e.target.value))} className="rounded-md border border-line bg-card2 px-1.5 py-1 text-fg">
-            {[10, 50, 100, 300, 1000, 2500].map((b) => <option key={b} value={b}>{b / 100}%</option>)}
+          <select value={slip} onChange={(e) => setSettings({ slippageBps: Number(e.target.value) })} className="rounded-md border border-line bg-card2 px-1.5 py-1 text-fg">
+            {[...new Set([10, 50, 100, 300, 1000, 2500, slip])].sort((x, y) => x - y).map((b) => <option key={b} value={b}>{b / 100}%</option>)}
           </select>
         </label>
       </div>

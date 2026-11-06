@@ -11,6 +11,7 @@ const NAV = [
   { href: "/liquidity", label: "Liquidity" },
   { href: "/pools", label: "Pools" },
   { href: "/privacy", label: "Privacy Center" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;

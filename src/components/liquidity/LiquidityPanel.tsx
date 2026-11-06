@@ -10,14 +10,15 @@ import { useAllowance, useLpBalance, usePair, useReadsReady, useTokenBalance, us
 import { connect, getWalletClient, switchToAppChain } from "@/lib/ethereum/wallet";
 import { bufferedGas, firstValid, runTx, type TxState } from "@/lib/ethereum/tx";
 import { readClient } from "@/lib/ethereum/read-client";
+import { getSettings, useSettings } from "@/lib/settings";
 import TokenSelect from "../TokenSelect";
 import TxStatus from "../TxStatus";
 import { parse } from "../swap/SwapCard";
 
 const fmt = (v: bigint | undefined, d: number, max = 6) => (v === undefined ? "–" : Number(formatUnits(v, d)).toLocaleString(undefined, { maximumFractionDigits: max }));
-const deadline = () => BigInt(Math.floor(Date.now() / 1000) + 20 * 60);
 
 export default function LiquidityPanel() {
+  const deadline = () => BigInt(Math.floor(Date.now() / 1000) + getSettings().deadlineMin * 60);
   const w = useWallet();
   const qc = useQueryClient();
   const { ready } = useReadsReady();
@@ -25,7 +26,7 @@ export default function LiquidityPanel() {
   const [B, setB] = useState<Token | null>(null);
   const [amtA, setAmtA] = useState("");
   const [amtB, setAmtB] = useState("");
-  const [slip] = useState(50);
+  const { slippageBps: slip, deadlineMin } = useSettings();
   const [pct, setPct] = useState(50);
   const [tx, setTx] = useState<TxState>({ phase: "idle" });
 
