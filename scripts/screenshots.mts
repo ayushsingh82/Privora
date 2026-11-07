@@ -52,7 +52,7 @@ const section = (id: string) => async (p: Awaited<ReturnType<typeof launch>>) =>
   await new Promise((r) => setTimeout(r, 2600));
 };
 await shot("how", 1280, 900, section("how"), "/");
-await shot("problem", 1280, 900, section("problem"), "/");
+await shot("problem", 1280, 900, section("why"), "/");
 await shot("architecture", 1280, 900, section("architecture"), "/");
 await shot("mobile", 390, 900, async () => {}, "/");
 await shot("mobile-app", 390, 900, async () => {});

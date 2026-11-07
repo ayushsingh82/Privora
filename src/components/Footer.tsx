@@ -20,6 +20,7 @@ export default function Footer() {
               <li><a href="/#flow" className={col}>The flow</a></li>
               <li><Link href="/swap" className={col}>Open app</Link></li>
               <li><Link href="/privacy" className={col}>Privacy page</Link></li>
+              <li><Link href="/pitch" className={col}>Pitch</Link></li>
             </ul>
           </div>
           <div>

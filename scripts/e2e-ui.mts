@@ -4,7 +4,7 @@
 import { launch } from "./lib/cdp.mts";
 
 const BASE = process.env.BASE ?? "http://127.0.0.1:3200";
-const ROUTES = ["/", "/swap", "/liquidity", "/pools", "/privacy", "/settings"];
+const ROUTES = ["/", "/pitch", "/swap", "/liquidity", "/pools", "/privacy", "/settings"];
 let failed = 0;
 const step = async (name: string, fn: () => Promise<void>) => {
   try { await fn(); console.log(`  ✔ ${name}`); } catch (e) { failed++; console.log(`  ✖ ${name}\n      ${e instanceof Error ? e.message : e}`); }

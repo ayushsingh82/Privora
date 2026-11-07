@@ -60,3 +60,15 @@ button:disabled { cursor: not-allowed; }
 
 /* dashboard: faint dot grid behind the page, fading out downwards */
 .app-grid { background-image: radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px); background-size: 28px 28px; -webkit-mask-image: linear-gradient(to bottom, #000, transparent 85%); mask-image: linear-gradient(to bottom, #000, transparent 85%); }
+
+/* pitch deck motion */
+@keyframes growx { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+@keyframes stepglow { 0%, 18%, 100% { background-color: #151515 } 6%, 12% { background-color: rgba(255,0,122,.16) } }
+@keyframes chipin { from { opacity: 0; transform: translateY(10px) scale(.96) } to { opacity: 1; transform: none } }
+.grow-x { transform-origin: left; animation: growx .9s ease-out both; animation-delay: var(--d, 0ms); }
+.stepglow { animation: stepglow 6s ease-in-out infinite; animation-delay: var(--d, 0s); }
+.chip-in { animation: chipin .5s ease-out both; animation-delay: var(--d, 0ms); }
+@media (prefers-reduced-motion: reduce) { .grow-x, .stepglow, .chip-in { animation: none; } }
+@keyframes growy { from { transform: scaleY(0) } to { transform: none } }
+.grow-y { transform-origin: top; animation: growy .9s ease-out both; animation-delay: var(--d, 0ms); }
+@media (prefers-reduced-motion: reduce) { .grow-y { animation: none; } }
